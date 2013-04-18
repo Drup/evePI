@@ -12,3 +12,6 @@ _client
 _server
 _deps
 local
+
+.depend
+.typerex
