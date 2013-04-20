@@ -11,9 +11,10 @@ let make_page ?(a=[]) ?(css=[]) ?(js=[]) s bodyl =
 		  ~a:a
 		  ~css:(
 			 ["css";"bootstrap-responsive.min.css"] ::
-				["css";"bootstrap.min.css"] :: css
+				["css";"bootstrap.min.css"] ::
+				  css
 		  )
-		  ~js:( ["js";"bootstrap.min.js"] :: js)
+		  ~js:( js @ [["js";"bootstrap.min.js"] ])
 		  (body bodyl)
 	 )
 

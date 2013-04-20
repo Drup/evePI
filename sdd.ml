@@ -1,6 +1,6 @@
 open Eliom_lib
 open Eliom_content
-open Eve_db
+open Eve_db.SDD
 
 let products = 
   <:table< planetSchematics (
@@ -93,7 +93,7 @@ let get_name pID =
 	  object.typeID = $int32:pID$ ;
 	  >>
   in 
-  (view_one ~log:stderr SDD name)
+  (view_one ~log:stderr name)
   >|= (fun x -> opt_string x#?name)
 	 
 let get_sons pID =
@@ -112,7 +112,7 @@ let get_sons pID =
 	  object in $invtypes$ ;
 	  object.typeID = product.typeID ;
 	  >> in
-	(view ~log:stderr SDD sons)
+  (view ~log:stderr sons)
   >|= List.map (fun x -> (x#!id, opt_string x#?name))
   
 let categorygoals = 43l
@@ -129,7 +129,7 @@ let get_possible_goals () =
 	  pi in $invtypes$ ;
 	  pi.groupID = nullable g.id ;
 	  >> in
-  (view ~log:stderr SDD goals)
+  (view ~log:stderr goals)
   >|= List.map (fun x -> (x#!id, opt_string x#?name))
 
 let planets_id =
@@ -144,7 +144,7 @@ let planets_id =
 	 (11l, "Temperate") ]
 
 (* kinda hacky, treat planets whitout a type as shattered *)
-let opt_planet = function
+let opt_planet_type = function
 	 Some i -> i 
   | None -> 30889l
 
@@ -152,20 +152,28 @@ let planet_to_id t = fst (List.find (fun (_,t') -> t = t') planets_id)
 let id_to_planet id = List.assoc id planets_id
 
 let get_systems () =
-  (query SDD 
+  (query 
 	  <:select< system | system in $mapSolarSystems$ ; >> )
   >|= List.map (fun s -> s#!solarSystemID, opt_string s#?solarSystemName)
 
 let planet_groupID = 7l
 
 let get_planets_by_system system_name = 
-  (query SDD 
-	  <:select< { id = planet.itemID ; name = planet.itemName ; typ = planet.typeID } 
-				  order by planet.itemID asc |
-				  planet in $mapDenormalize$ ;
-				  system in $mapSolarSystems$ ;
-				  system.solarSystemName = nullable $string:system_name$ ;
-				  nullable system.solarSystemID = planet.solarSystemID ;
-				  planet.groupID = $int32:planet_groupID$ ;
-				  >>)
-  >|= List.map (fun s -> s#!id, opt_string s#?name, opt_planet s#?typ)
+  (view 
+	  << { id = planet.itemID ; name = planet.itemName ; typ = planet.typeID }
+		order by planet.itemID asc |
+		planet in $mapDenormalize$ ;
+		system in $mapSolarSystems$ ;
+		system.solarSystemName = nullable $string:system_name$ ;
+		nullable system.solarSystemID = planet.solarSystemID ;
+		planet.groupID = $int32:planet_groupID$ ;
+		>>)
+  >|= List.map (fun s -> s#!id, opt_string s#?name, opt_planet_type s#?typ)
+
+let get_type planet_name = 
+  (view_one
+	  << { typ = planet.typeID } |
+		planet in $mapDenormalize$ ;
+		planet.itemName = $string:planet_name$ ;
+		>>)
+	 >|= fun s -> id_to_planet (opt_planet_type s#?typ)

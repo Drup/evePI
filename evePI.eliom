@@ -2,6 +2,7 @@
 open Eliom_lib
 open Eliom_content
 open Eliom_service
+open Eliom_content.Html5
 open Eliom_content.Html5.D
 }}
 open Html
@@ -143,7 +144,29 @@ let action_with_redir_register ?(redir=Eliom_service.void_coservice') action =
   Eliom_registration.Any.register f
 
 
+(** Mes projets *)
+let project_member_service =
+  Eliom_service.service
+    ~path:["myprojects";""] 
+	 ~get_params:Eliom_parameter.unit ()
 
+let project_member_coservice =
+  Eliom_service.service
+    ~path:["projects"] 
+	 ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
+
+let make_link_member_project project_id project_name = 
+  a ~service:project_member_coservice [pcdata project_name] project_id
+
+let make_link_project_page project_id project_name = 
+  a ~a:(classe "btn") ~service:project_member_coservice [pcdata project_name] project_id
+
+let make_member_projects_list user = 
+  lwt projects = Users.get_my_projects user in
+  let aux (id,name) = 
+	 li [make_link_member_project id name]
+  in 
+  Lwt.return (ul (List.map aux projects))
 
 (** Gestion des projets *)
 
@@ -176,7 +199,8 @@ let _ =
 let new_project_form () = 
   lwt goals = Sdd.get_possible_goals () in
   let (ghd,gtl) = 
-	 let f (id,name) = Option ([],id,Some (pcdata name),true) in
+	 let f (id,name) = 
+		Option ([],id,Some (pcdata name),true) in
 	 f (List.hd goals), List.map f (List.tl goals)
   in					
   Lwt.return (post_form ~a:(classe "form-inline")
@@ -224,7 +248,7 @@ let make_projects_list user =
   in
   let aux (id, name, desc) l =
 	 ((dt [span ~a:[a_class ["btn-group"]] [
-					  button ~button_type:`Button ~a:[a_class ["btn"; "disabled"]] [strong [pcdata name]]; 
+					  make_link_project_page id name ; 
 					  make_button id name
 			]],[]),
 	  (dd [pcdata desc],[]))
@@ -263,29 +287,33 @@ let planets_in_system_service =
 		Ocsigen_messages.console2 system_id ;
 		lwt list = Sdd.get_planets_by_system system_id in
 		let list = List.map 
-			 (fun (id,name,typ) -> Option ([],id,Some (pcdata name),true)) list in
-		let head = Option ([],Int32.zero,Some (pcdata ""),false) in
+			 (fun (id,name,typ) -> Option ([],name,Some (pcdata name),true)) list in
+		let head = Option ([],"",Some (pcdata ""),false) in
 		Lwt.return (head,list)
 	 )
 
 let new_planet_service =
   Eliom_service.post_coservice'
-	 ~post_params:Eliom_parameter.(neopt (int64 "project") ** int32 "location") ()
+	 ~post_params:Eliom_parameter.(neopt (int64 "project") ** string "location") ()
 
 {client{
 
 let select_system_handler location planet_div select_system =
   let open Lwt_js_events in
   let select_system = Html5.To_dom.of_select select_system in
-  Lwt.async (fun () -> changes select_system 
-		(fun _ _ ->
+  Lwt.async 
+	 (fun () -> 
+	  changes 
+		 select_system
+		 (fun _ _ ->
 		  let current_system = Js.to_string select_system##value in 
-		  lwt head,list = Eliom_client.call_caml_service 
+		  lwt head,list = 
+			 Eliom_client.call_caml_service 
 				~service:%planets_in_system_service () current_system in
-		  let planet_select = int32_select ~name:location head list in
+		  let planet_select = string_select ~name:location head list in
 		  let _ = Html5.Manip.replaceAllChild planet_div [planet_select] in
 		  Lwt.return ()
-		))
+	 ))
 }}
 
 let new_planet_form user =
@@ -294,7 +322,9 @@ let new_planet_form user =
   let form_fun (proj,location) =
 	 let select_system = Raw.select slist in
 	 let planet_place = span [] in
-	 ignore {unit{ select_system_handler %location %planet_place %select_system }} ;
+	 ignore {unit{ 
+					 select_system_handler %location %planet_place %select_system 
+			  }} ;
 	 [ fieldset ~legend:(legend [pcdata "Create a new planet"]) [
 		  int64_select ~name:proj phead plist ;
 		  select_system ;
@@ -318,7 +348,8 @@ let _ =
   action_register
 	 ~service:new_planet_service
 	 (fun user () (project,location) -> (
-		 lwt _ = Users.new_planet ?project user.id in
+		 lwt typ = Sdd.get_type location in
+		 lwt _ = Users.new_planet ?project user.id location typ in
 		 Lwt.return ()
 	 ))
 
@@ -354,39 +385,132 @@ let specialize_planet_service =
   Eliom_service.post_coservice'
 	 ~post_params:Eliom_parameter.(radio int64 "planet" ** int64 "product") ()
 
-let make_planet_list_form project =
+let make_product_button form_prod (product_id,product_name,note) =
+  int64_button ~name:form_prod ~value:product_id [pcdata product_name]
+
+let get_project_tree form_prod project = 
+  lwt roots_id = Users.get_roots project in
+  let nodes = Hashtbl.create 20 in
+  lwt trees = 
+	 Tree.make_forest (fun (id,_,_) -> Users.get_sons id) roots_id in
+  let format_node (id, typeid, note) =
+	 lwt name = Sdd.get_name typeid in
+	 let button = make_product_button form_prod (id,name,note) in
+	 Hashtbl.add nodes id button ;
+	 Lwt.return [button]
+  in
+  lwt list = Tree.Lwt.printf format_node trees in
+  Lwt.return (nodes, list)
+
+{client{
+
+let class_node_hover = "tree-hover"
+
+let class_node_select = "tree-select"
+  
+let make_lights () = 
+  let current = ref None in
+  let up node_class node = 
+	 let node = To_dom.of_button node in
+	 node##classList##add(Js.string node_class) in
+  let down node_class node = 
+	 let node = To_dom.of_button node in
+	 node##classList##remove(Js.string node_class) in
+  let select b =
+	 (match !current with 
+		 Some cur_b -> down class_node_select cur_b 
+	  | None -> ()) ; 
+	 current := Some b ;
+	 up class_node_select b in
+  let clean () = match !current with 
+		Some cur_b -> down class_node_select cur_b 
+	 | None -> ()
+  in
+  let hover_up = up class_node_hover in
+  let hover_down = down class_node_hover in
+  hover_up, hover_down, select, clean
+  			 
+let get_init_planet () = 
+  let light_up, light_down, select_node, clean_node = make_lights () in
+  let open Lwt_js_events in
+  let handle_hover planet node =
+	 Lwt.async
+		(fun () -> 
+		 let planet = To_dom.of_input planet in
+		 mouseovers
+			planet
+			(fun _ _ ->
+			 light_up node ;
+			 mouseout planet >|= (fun _ -> light_down node)))
+  in
+  let handle_select planet node = 
+	 Lwt.async 
+		(fun () -> 
+		 let planet = To_dom.of_input planet in
+		 clicks
+			planet
+			(fun _ _ -> Lwt.return (select_node node)))
+  in
+  let handle_clean planet = 
+	 Lwt.async 
+		(fun () -> 
+		 let planet = To_dom.of_input planet in
+		 clicks
+			planet
+			(fun _ _ -> Lwt.return (clean_node ())))
+  in
+  let aux button = function
+	 |	Some node -> handle_hover button node ; handle_select button node
+	 | None -> handle_clean button
+  in
+  aux
+
+}}		 
+
+
+let hashtbl_find tbl = function
+  | Some id -> Some (Hashtbl.find tbl id)
+  | None -> None 
+
+{shared{
+type aux = Html5_types.input Eliom_content_core.Html5.elt -> 
+			  Html5_types.button Eliom_content_core.Html5.elt option -> unit
+	}}
+
+let make_planet_list_form form_planet nodes project =
   lwt planets_lists = Users.get_planets_by_project project in
-  let aux_planets planet planet_id = 
-	 int64_radio ~name:planet ~value:planet_id () in
-  let aux_users planet (user, planet_list) =
-	 divc "control-group" [
-			  label ~a:(a_for planet :: classe "control-label") [pcdata user];
-			  divc "controls" (List.map (aux_planets planet) planet_list) ;
+  let init_planet = {aux{ get_init_planet () }} in
+  let make_planet_button (planet_id,node_id) = 
+	 let node = hashtbl_find nodes node_id in
+	 let planet = int64_radio ~name:form_planet ~value:planet_id () in
+	 ignore {unit{ %init_planet %planet %node }} ;
+	 planet in
+  let aux_users (user, planet_list) =
+	 let free_planets, planets = 
+		List.partition (fun (_,x) -> x = None) planet_list in
+	 divcs ["planet-list";"control-group"] [
+			  label 
+				 ~a:(a_for form_planet :: classe "control-label") 
+				 [pcdata user];
+			  divc "controls" [
+						span (List.map make_planet_button planets) ;
+						span (List.map make_planet_button free_planets) ;
+					 ]
 			]
   in
-  Lwt.return (fun planet -> List.map (aux_users planet) planets_lists)
-
-let make_product_button prod (product_id,product_name) =
-  [int64_button ~name:prod ~value:product_id [pcdata product_name]]
+  Lwt.return (List.map aux_users planets_lists)
 
 let specialize_planet_form project = 
-  lwt planet_list = make_planet_list_form project in
   lwt project_name = Users.get_project_name project in
-  lwt roots_id = Users.get_roots project in
-  lwt trees = 
-	 Lwt_list.map_s
-		(Tree.make (fun (id,_) -> Users.get_sons id)) roots_id in
-  lwt trees = 
-	 Lwt_list.map_s 
-		(Tree.lwt_map 
-			(fun (id,typeid) -> 
-			  lwt name = Sdd.get_name typeid in Lwt.return (id,name))) trees in
-  Lwt.return (post_form ~a:(classe "form-horizontal")
-		~service:specialize_planet_service 
-		(fun (plan,prod) -> 
-		  (planet_list plan) @
-		  List.map (Tree.print_as_list (make_product_button prod)) trees
-		) ())
+  let form_fun (form_planet,form_product) = 
+	 lwt nodes,trees = get_project_tree form_product project in
+	 lwt planet_list = make_planet_list_form form_planet nodes project in
+	 Lwt.return (planet_list @ [trees])
+  in
+  lwt_post_form 
+	 ~a:(classe "form-horizontal")
+	 ~service:specialize_planet_service 
+	 form_fun ()
 	 
 let _ =
   action_register
@@ -421,37 +545,38 @@ let make_free_planet_list project_id =
 	 li [pcdata (Printf.sprintf "%s : %Li free planets" user_name count)]
   in 
   Lwt.return (ul (List.map aux users_list))
-  
 
-(** Mes projets *)
-let project_member_service =
-  Eliom_service.service
-    ~path:["projects";"member";""] 
-	 ~get_params:Eliom_parameter.unit ()
+(* Decorate a tree according to various information 
+   Used in the project_page *)
 
-let project_member_coservice =
-  Eliom_service.service
-    ~path:["projects";"member"] 
-	 ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
-
-let make_link_member_project project_id project_name = 
-  a ~service:project_member_coservice [pcdata project_name] project_id
-
-let make_member_projects_list user = 
-  lwt projects = Users.get_my_projects user in
-  let aux (id,name) = 
-	 li [make_link_member_project id name]
-  in 
-  Lwt.return (ul (List.map aux projects))
-
+let decorate_tree_node (id,typeid,notes) = 
+  lwt name = Sdd.get_name typeid in 
+  lwt users = Users.get_planets_by_product id in
+  let printer = function
+		1 -> "1 planet"
+	 | n -> Printf.sprintf "%i planets" n in
+  let format_user (user,planets) = 
+	 li ~a:[a_title (printer planets)] [pcdata user]
+  in
+  Lwt.return Html5.F.(
+	 [ div
+		  [span ~a:[a_title notes] [pcdata name] ;
+			ul (List.map format_user users)
+  ]])
  
+let decorate_trees project = 
+  lwt roots_id = Users.get_roots project in
+  lwt trees = 
+	 Tree.make_forest (fun (id,_,_) -> Users.get_sons id) roots_id in
+  Tree.Lwt.printf decorate_tree_node trees
+
 (** Le menu *)
 
 let menu () =
   let elements =
 	 [main_service, [pcdata "Home"] ;
-	  project_list_service, [pcdata "Projets"] ;
-	  project_member_service, [pcdata "My Projects"] ;
+	  project_list_service, [pcdata "Projects"] ;
+	  project_member_service, [pcdata "Your Projects"] ;
 	 ]
   in
   navbar 
@@ -477,62 +602,67 @@ let () =
   Connected.register
 	 ~service:main_service
 	 (fun () () -> 
-		Lwt.return (
-		  fun user ->
-			 lwt form = new_planet_form user.id in
-			 make_page 
-				"Eve PI"
-				[ center [h1 ~a:(classe "text-center") [pcdata "Welcome to EvePI"] ];
-				  form ;
-				]
-		)) ;
+	  Lwt.return (
+			fun user ->
+			lwt form = new_planet_form user.id in
+			make_page 
+			  "Eve PI"
+			  [ center [h1 ~a:(classe "text-center") [pcdata "Welcome to EvePI"] ];
+				 form ;
+			  ]
+	 )) ;
 
   Connected.register 
 	 ~service:project_list_service
 	 (fun () () ->
-		Lwt.return (
-		  fun user ->
-			 lwt projects_list = make_projects_list user.id in
-			 lwt project_form = new_project_form () in
-			 make_page
-				"Eve PI - Projects"
-				[ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
-				  dl ~a:(classes []) projects_list ;
-				  project_form ;
-				]
+	  Lwt.return (
+			fun user ->
+			lwt projects_list = make_projects_list user.id in
+			lwt project_form = new_project_form () in
+			make_page
+			  "Eve PI - Projects"
+			  [ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
+				 dl ~a:(classes []) projects_list ;
+				 project_form ;
+			  ]
 	 )) ;
   
   Connected.register
 	 ~service:project_admin_service
 	 (fun project () -> 
-		Lwt.return (
-		  fun user ->
-			 lwt project_name = Users.get_project_name project in
-			 lwt is_admin = Users.is_admin project user.id in
-			 lwt roots_id = Users.get_roots project in
-			 lwt planets = specialize_planet_form project in
-			 lwt trees = 
-				Lwt_list.map_s
-				  (Tree.make (fun (id,_) -> Users.get_sons id)) roots_id in
-			 lwt trees = 
-				Lwt_list.map_s 
-				  (Tree.lwt_map (fun (id,typeid) -> Sdd.get_name typeid)) trees in
-			 lwt free_planets = 
-				make_free_planet_list project in
-			 if not is_admin then 
-				make_page ("Eve PI - Oups") 
-				  [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
-					 center [h1 [pcdata "GO AWAY !"]] ]
-			 else
-				make_page
-				  ("Eve PI - Admin - "^ project_name)
-				  ( center [h2 [pcdata "Admin panel for the project :" ; em [pcdata project_name] ]] ::
-						free_planets ::
-						planets ::
-						[]
-						(*List.map Tree.print_as_plain_list trees*)
-				  )
-		)) ;
+	  Lwt.return (
+			fun user ->
+			let not_exist () = 
+			  make_page
+				 ("Eve PI - My Projects")
+				 [ center [h2 [pcdata "This project doesn't exist"]]
+				 ] in
+			let not_admin () = 
+			  lwt project_name = Users.get_project_name project in
+			  make_page 
+				 ("Eve PI - Oups") 
+				 [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
+					center [h1 [pcdata "GO AWAY !"]] ] in
+			let regular_page () = 
+			  lwt project_name = Users.get_project_name project in
+			  lwt roots_id = Users.get_roots project in
+			  lwt planets = specialize_planet_form project in
+			  make_page
+				 ("Eve PI - Admin - "^ project_name)
+				 [ center [h2 [pcdata "Admin panel for the project : " ; 
+									em [pcdata project_name] ]] ;
+					planets ;
+				 ] in
+			lwt exist = Users.exist_project project in
+			if not exist then 
+			  not_exist () 
+			else
+			  lwt is_admin = Users.is_admin project user.id in
+			  if not is_admin then
+				 not_admin ()
+			  else
+				 regular_page ()
+	 )) ;
   
   Connected.register
 	 ~service:project_member_service
@@ -542,7 +672,7 @@ let () =
 			lwt project_list = make_member_projects_list user.id in
 			make_page
 			  "Eve PI - My Projects"
-			  [ center [h2 [pcdata "Here are your projects"]] ;
+			  [ center [h2 [pcdata "Your Projects"]] ;
 				 project_list
 			  ]
 	 )) ;
@@ -550,23 +680,48 @@ let () =
   Connected.register
 	 ~service:project_member_coservice
 	 (fun project () -> 
-		Lwt.return (
-		  fun user ->
-			 lwt project_name = Users.get_project_name project in
-			 lwt roots_id = Users.get_roots project in
-			 lwt trees = 
-				Lwt_list.map_s
-				  (Tree.make (fun (id,_) -> Users.get_sons id)) roots_id in
-			 lwt trees = 
-				Lwt_list.map_s 
-				  (Tree.lwt_map (fun (id,typeid) -> Sdd.get_name typeid)) trees in
-			 lwt is_admin = Users.is_admin project user.id in
-			 let admin_link = if is_admin then
-				  [ a ~service:project_admin_service [badge_important [pcdata "admin panel"]] project ] else [] in
-			 make_page
-				("Eve PI - My Projects - "^ project_name)
-				( center [h2 ([pcdata "Project : " ; em [pcdata project_name] ; pcdata " " ] @ admin_link)] ::
-					 List.map Tree.print_as_plain_list trees
-				)
-		)) ;
+	  Lwt.return (
+			fun user ->
+			let not_exist () = 
+			  make_page
+				 ("Eve PI - My Projects")
+				 [ center [h2 [pcdata "This project doesn't exist"]]
+				 ] in
+			let not_attached () = 
+			  lwt project_name = Users.get_project_name project in
+			  make_page
+				 ("Eve PI - My Projects - "^ project_name)
+				 [ center [h2 [pcdata "Project : " ; 
+									em [pcdata project_name]]] ;
+					h3 [pcdata "You are not attached to this project " ; 
+						 join_project_button project
+						]
+				 ] in
+			let regular_page () =
+			  lwt project_name = Users.get_project_name project in
+			  lwt is_admin = Users.is_admin project user.id in
+			  lwt trees = decorate_trees project in
+			  let admin_link = 
+				 if is_admin then
+					[ a ~service:project_admin_service 
+						 [badge_important [pcdata "admin panel"]] project ] 
+				 else [] 
+			  in
+			  make_page
+				 ("Eve PI - My Projects - "^ project_name)
+				 [ center [h2 ([pcdata "Project : " ; 
+									 em [pcdata project_name] ; 
+									 pcdata " " ] @ admin_link)] ;
+					trees ;
+				 ] in
+			lwt exist = Users.exist_project project in
+			if not exist then 
+			  not_exist () 
+			else
+			  lwt is_attached = Users.is_attached project user.id in 
+			  if not is_attached then
+				 not_attached ()
+			  else
+				 regular_page ()
+	 )) ;
   
