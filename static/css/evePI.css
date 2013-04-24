@@ -1,19 +1,4 @@
-/*.navbar-form > .btn {
-  padding: 10px 15px ;
-  margin-top: 0px ;
-  border-style: none ;
-  background-color: transparent;
-  background-image: none;
-  color: rgb(119, 119, 119);
-}
 
-.navbar-form > .btn:hover {
-  color: rgb(51, 51, 51);
-}*/
-
-* {
-	 margin: 0; padding: 0;
-}
 
 
 .planet {
@@ -52,6 +37,12 @@
 
 .planet-list [type=radio] {
 	 margin: 0px ;
+}
+
+
+
+.tree, .tree * {
+	 margin: 0; padding: 0;
 }
 
 div.tree {
@@ -94,12 +85,12 @@ li.tree {
 li.tree::before, li.tree::after{
 	content: '';
 	position: absolute; top: 0; right: 50%;
-	border-top: 1px solid #ccc;
+	border-top: 1px solid #666;
 	width: 50%; height: 20px;
 }
 li.tree::after{
 	right: auto; left: 50%;
-	border-left: 1px solid #ccc;
+	border-left: 1px solid #666;
 }
 
 /*We need to remove left-right connectors from elements without 
@@ -118,7 +109,7 @@ li.tree:first-child::before, li.tree:last-child::after{
 }
 /*Adding back the vertical connector to the last nodes*/
 li.tree:last-child::before{
-	border-right: 1px solid #ccc;
+	border-right: 1px solid #666;
 	border-radius: 0 5px 0 0;
 	-webkit-border-radius: 0 5px 0 0;
 	-moz-border-radius: 0 5px 0 0;
@@ -133,20 +124,18 @@ li.tree:first-child::after{
 ul.tree ul.tree::before{
 	content: '';
 	position: absolute; top: 0; left: 50%;
-	border-left: 1px solid #ccc;
+	border-left: 1px solid #666;
 	width: 0; height: 20px;
 }
 
 li.tree button, li.tree a, li.tree div {
 	 margin: 0;
-	 border: 1px solid #ccc;
+	 border: 1px solid #666;
 	 padding: 5px 10px;
 	 text-decoration: none;
-	 color: #444;
-	 background-color: #F7F7F7 ;
-	 font-family: arial, verdana, tahoma;
-	 font-size: 11px;
 	 display: inline-block;
+	 background-color: transparent;
+	 color: #bbb;
 	 
 	 border-radius: 5px;
 	 -webkit-border-radius: 5px;
@@ -158,13 +147,13 @@ li.tree button, li.tree a, li.tree div {
 }
 
 .tree .tree-hover{
-	background: #c8e4f8; color: #000; border: 1px solid #94a0b4;
+	background: #294559; border: 1px solid #94a0b4;
 }
 
 li.tree button:hover, li.tree a:hover, li.tree div:hover {
-	background: #c8e4f8; color: #000; border: 1px solid #94a0b4;
+	background: #294559; border: 1px solid #94a0b4;
 }
 
 .tree .tree-select{
-	background: #8BE655; color: #000; border: 1px solid #56BE2F;
+	background: #1E5A25; border: 1px solid #56BE2F;
 }
