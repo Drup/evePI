@@ -33,8 +33,7 @@ CREATE TABLE planets (
 		 user_id bigint NOT NULL references users(id) on delete cascade,
 		 project_id bigint DEFAULT NULL references projects(id) on delete SET NULL,
 		 product_id bigint DEFAULT NULL references projects_tree(product_id) on delete SET NULL,
-		 location text NOT NULL,
-		 type text NOT NULL,
+		 location integer NOT NULL,
 		 notes text DEFAULT NULL
 );
 
