@@ -127,7 +127,7 @@ let menu ?(prefix=[]) ?(postfix=[]) ?(active=["active"]) ?(liclasses=[]) ?(class
 	 | None -> [a_class classes] 
   in
   ul ~a:a_ul (prefix @ aux l)
-			 
+
 (* Permet de wrap une navbar *)
 let navbar ?(classes=[]) ?head ?(head_classes=[]) menu =
   let body = match head with 
@@ -137,7 +137,7 @@ let navbar ?(classes=[]) ?head ?(head_classes=[]) menu =
   divcs ("navbar"::classes) [
 	 divc "navbar-inner" body
   ]
-      
+
 (** Typeahead
   http://twitter.github.io/bootstrap/javascript.html#typeahead *)
 
@@ -198,9 +198,11 @@ module Typeahead = struct
 		| (_, None)::l -> make_object obj l
 		| (s, Some v) :: l -> U.set obj s v ; make_object obj l
 	 in 
-	 let obj = make_object (U.obj [| |]) user_data in
-	 let data = U.fun_call (U.variable "$") [|U.inject i|] in
-	 ignore (U.meth_call data "typeahead" [| U.inject obj|] )
+	 try 
+		let obj = make_object (U.obj [| |]) user_data in
+		let data = U.fun_call (U.variable "$") [|U.inject i|] in
+		ignore (U.meth_call data "typeahead" [| U.inject obj|] )
+	 with exn -> debug_exn "" exn ; raise exn 
 
 
 end
