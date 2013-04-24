@@ -45,8 +45,7 @@ let planets =
 	user_id bigint NOT NULL,
 	project_id bigint,
 	product_id bigint,
-	location text NOT NULL,
-	type text NOT NULL,
+	location integer NOT NULL,
 	notes text
 	) >>
 	 
@@ -206,7 +205,7 @@ let change_projet_goal project_id new_goal new_tree =
 	 
 (** Planets *)
 
-let new_planet ?prod ?note ?project user location typ =
+let new_planet ?prod ?note ?project user location =
   let project = opt_map (fun p -> <:value< $int64:p$ >>) project in
   let prod = opt_map (fun p -> <:value< $int64:p$ >>) prod in
   let note = opt_map (fun n -> <:value< $string:n$ >>) note in
@@ -217,8 +216,7 @@ let new_planet ?prod ?note ?project user location typ =
 	  user_id = $int64:user$ ;
 	  product_id = of_option $prod$ ;
 	  notes = of_option $note$ ;
-	  location = $string:location$ ;
-	  type = $string:typ$ ;
+	  location = $int32:location$ ;
 	  } >>
 
 let update_planet_project planet_id project =
@@ -239,6 +237,15 @@ let update_planet_notes planet_id notes =
 	  p.id = $int64:planet_id$ 
 	  >>
 
+(* Group an 'a * 'b list according to the 'a field. 
+THE LIST NEED TO BE ORDERED ! *)
+let list_grouping l = 
+  let aux l (a,b) = match l with 
+		[] -> [(a,[b])] 
+	 | (x,y)::t when x = a -> (a,b::y)::t
+	 | _ -> (a,[b])::l
+  in List.fold_left aux [] l
+
 let get_planets_by_user user =
   (view
 	  << { p = planet.id } |
@@ -246,6 +253,20 @@ let get_planets_by_user user =
 		planet.user_id = $int64:user$
 		>>)
   >|= List.map (fun x -> x#!p)
+
+let get_planets_by_user_grouped_loc user =
+  (view
+	<< { proj = planet.project_id ;
+		  p = planet.id ; 
+		  loc = planet.location ;
+        prod = planet.product_id } 
+        order by planet.location asc, planet.id asc |
+     planet in $planets$ ; 
+     planet.user_id = $int64:user$
+	 >>)
+>|= (fun l -> 
+  list_grouping (List.map 
+		(fun x -> x#!loc, (x#!p, x#?proj, x#?prod)) l))
 
 let get_planets_by_product product =
   (view
@@ -257,15 +278,6 @@ let get_planets_by_product product =
 		planet.user_id = user.id ;
 		>>)
   >|= List.map (fun x -> x#!u,Int64.to_int x#!p)
-
-(* Group an 'a * 'b list according to the 'a field. 
-THE LIST NEED TO BE ORDERED ! *)
-let list_grouping l = 
-  let aux l (a,b) = match l with 
-		[] -> [(a,[b])] 
-	 | (x,y)::t when x = a -> (a,b::y)::t
-	 | _ -> (a,[b])::l
-  in List.fold_left aux [] l
 
 let get_planets_by_project project =
   (view
@@ -283,12 +295,14 @@ let get_planets_by_project project =
 
 let get_planets_by_project_user project user =
   (view
-		  << { p = planet.id } |
+		  << { p = planet.id ; 
+		  loc = planet.location ;
+        prod = planet.product_id } |
 			planet in $planets$ ;
 			planet.user_id = $int64:user$ ;
 			planet.project_id = $int64:project$
 			>>)
-  >|= List.map (fun x -> x#!p)
+  >|= List.map (fun x -> x#!p,x#!loc,x#?prod)
 
 let get_free_user project_id = 
   (view ~log:stderr

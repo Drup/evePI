@@ -4,8 +4,8 @@ open Eliom_content
 open Eliom_service
 open Eliom_content.Html5
 open Eliom_content.Html5.D
+open Bootstrap
 }}
-open Html
 		 
 module EvePI_app =
   Eliom_registration.App (
@@ -19,7 +19,7 @@ let main_service =
 
 (** Gestion de la connexion des utilisateurs **)
 
-type user = {id : int64 ; name : string} 
+type user = {id : int64 ; name : string}
 let user = Eliom_reference.eref ~scope:Eliom_common.default_session_scope None
 
 (* La connexion *)
@@ -83,18 +83,22 @@ let login_name_form service button_text =
 let disconnection_service =
   Eliom_service.post_coservice'
 	 ~post_params:Eliom_parameter.unit ()
-
+ 
 let disconnect_button =
-  post_form ~a:(classes ["navbar-form";"pull-right"]) ~service:disconnection_service
-	 (fun () -> [button ~a:(classes ["btn"]) 
-						~button_type:`Submit [pcdata "Log out"] ]) ()
+  post_form 
+	 ~a:(classes ["navbar-form";"pull-right"]) 
+	 ~service:disconnection_service
+    (fun () -> [
+		button 
+		  ~a:(classes ["btn";"btn-danger"])
+        ~button_type:`Submit [pcdata "Log out"] ]) ()
 
 let _ = 
   Eliom_registration.Redirection.register
     ~service:disconnection_service
     (fun () () -> 
-	  ignore (Eliom_state.discard ~scope:Eliom_common.default_session_scope ()) ;
-	  Lwt.return (Eliom_service.void_coservice')
+		lwt _ = Eliom_state.discard ~scope:Eliom_common.default_session_scope () in 
+		Lwt.return (Eliom_service.void_coservice')
 	 )
 
 (** Le Module Connected
@@ -155,18 +159,11 @@ let project_member_coservice =
     ~path:["projects"] 
 	 ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
 
-let make_link_member_project project_id project_name = 
+let make_link_member_project (project_id,project_name) = 
   a ~service:project_member_coservice [pcdata project_name] project_id
 
 let make_link_project_page project_id project_name = 
   a ~a:(classe "btn") ~service:project_member_coservice [pcdata project_name] project_id
-
-let make_member_projects_list user = 
-  lwt projects = Users.get_my_projects user in
-  let aux (id,name) = 
-	 li [make_link_member_project id name]
-  in 
-  Lwt.return (ul (List.map aux projects))
 
 (** Gestion des projets *)
 
@@ -246,87 +243,118 @@ let make_projects_list user =
 	 then button ~a:(classes ["btn"; "disabled"]) ~button_type:`Button [pcdata "Already in !"]
 	 else join_project_button id
   in
-  let aux (id, name, desc) l =
+  let aux (id, name, desc) =
 	 ((dt [span ~a:[a_class ["btn-group"]] [
 					  make_link_project_page id name ; 
 					  make_button id name
 			]],[]),
 	  (dd [pcdata desc],[]))
-	 :: l
   in
-  Lwt.return (List.fold_right aux projects [])
+  Lwt.return (List.map aux projects)
 
 
 
 (** Gestion des planetes *)
 
-let format_planet_list form_planet list = 
-  let aux_planet form_planet (id,location,typ) =
-	 int64_radio 
-		~a:[lclasse typ; a_title location] 
-		~name:form_planet 
-		~value:id () in
-  List.map (aux_planet form_planet) list
+let make_free_planet_list project_id =
+  lwt users_list = Users.get_free_user project_id in
+  let aux (_id,user_name,count) = 
+	 li [pcdata (Printf.sprintf "%s : %Li free planets" user_name count)]
+  in 
+  Lwt.return (ul (List.map aux users_list))
+
+let format_planet_list list = 
+  let aux_planet (id,info,prod) =
+	 i
+		~a:[lclasses ["planet"]]
+		[] in
+  List.map aux_planet list
+
+let format_grouped_planet_list format_group list = 
+  let aux_group (group, l) = 
+	 (dt [format_group group],[]),(dd (format_planet_list l),[])
+  in
+  divc "planet-list" [dl ~a:(classe "dl-horizontal") (List.map aux_group list)]
+  
+let make_planet_list_by_project user = 
+  lwt projects = Users.get_my_projects user in
+  let aux (id,name) = 
+	 lwt planets = Users.get_planets_by_project_user user id in
+	 Lwt.return ((id,name), planets)
+  in 
+  Lwt_list.map_p aux projects
 
 
 (* Nouvelle planete *)
 
-let list_to_select null list = 
-  let list = List.map (fun (id,name) -> Option ([],id,Some (pcdata name),true)) list in
-  let head = Option ([],null,Some (pcdata ""),false) in
+let list_to_select list = 
+  let list = List.map (fun (id,name) -> Option ([],Some id,Some (pcdata name),true)) list in
+  let head = Option ([],None,Some (pcdata ""),true) in
   head,list
 
 let list_to_raw_select list = 
   let list = List.map (fun (id,name) -> Raw.option (Raw.pcdata name)) list in
   list
 
+
+let opt_int64 = 
+  let to_string = function None -> "" | Some x -> Int64.to_string x in
+  let of_string = function "" -> None | s -> Some (Int64.of_string s) in
+  Eliom_parameter.user_type ~to_string ~of_string
+
 let planets_in_system_service =
   Eliom_registration.Ocaml.register_post_coservice'
     ~post_params:Eliom_parameter.(string "system")
-    (fun () system_id -> 
-		Ocsigen_messages.console2 system_id ;
-		lwt list = Sdd.get_planets_by_system system_id in
-		let list = List.map 
-			 (fun (id,name,typ) -> Option ([],name,Some (pcdata name),true)) list in
-		let head = Option ([],"",Some (pcdata ""),false) in
-		Lwt.return (head,list)
-	 )
+    (fun () system_id -> Sdd.get_planets_by_system system_id)
 
 let new_planet_service =
   Eliom_service.post_coservice'
-	 ~post_params:Eliom_parameter.(neopt (int64 "project") ** string "location") ()
+	 ~post_params:Eliom_parameter.(opt_int64 "project" ** int32 "location") ()
 
 {client{
 
-let select_system_handler location planet_div select_system =
-  let open Lwt_js_events in
-  let select_system = Html5.To_dom.of_select select_system in
-  Lwt.async 
-	 (fun () -> 
-	  changes 
-		 select_system
-		 (fun _ _ ->
-		  let current_system = Js.to_string select_system##value in 
-		  lwt head,list = 
-			 Eliom_client.call_caml_service 
-				~service:%planets_in_system_service () current_system in
-		  let planet_select = string_select ~name:location head list in
-		  let _ = Html5.Manip.replaceAllChild planet_div [planet_select] in
-		  Lwt.return ()
-	 ))
-}}
+	let select_system_handler slist location planet_div select_system =
+	  let open Lwt_js_events in
+	  let select_system = Html5.To_dom.of_input select_system in
+	  let slist = Js.array (Array.of_list (List.map Js.string slist)) in
+	  let updater s =
+		 let current_system = Js.to_string s in
+		 lwt list = 
+			Eliom_client.call_caml_service 
+			  ~service:%planets_in_system_service () current_system in
+		 let list = List.map 
+			  (fun (id,name,typ) -> Option ([],id,Some (pcdata name),true)) list in
+		 let head,tail = match list with
+			| [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
+			| hd::tl -> hd,tl in
+		 let planet_select = int32_select ~name:location head tail in
+		 let _ = Html5.Manip.replaceAllChild planet_div [planet_select] in
+		 Lwt.return () in 
+	  let updater s = Lwt.ignore_result (updater s) ; s in
+	  Lwt.async (fun () -> 
+		 Typeahead.apply 
+			~source:slist  
+			~items:4
+			~updater
+			select_system ; 
+		 Lwt.return () )
+ }}
 
 let new_planet_form user =
-  lwt phead,plist = Users.get_my_projects user >|= list_to_select 0L in
-  lwt slist = Sdd.get_systems () >|= list_to_raw_select in
+  lwt phead,plist = Users.get_my_projects user >|= list_to_select in
+  lwt slist = Sdd.get_systems () >|= List.map snd in
   let form_fun (proj,location) =
-	 let select_system = Raw.select slist in
+	 let select_system = 
+		Raw.input ~a:[a_input_type `Text; 
+						  a_autocomplete `Off;
+						  a_placeholder "Location"; 
+						  lclasse ".typeahead"] () in
 	 let planet_place = span [] in
-	 ignore {unit{ 
-					 select_system_handler %location %planet_place %select_system 
-			  }} ;
+	 ignore {unit{ select_system_handler %slist %location %planet_place %select_system }} ;
 	 [ fieldset ~legend:(legend [pcdata "Create a new planet"]) [
-		  int64_select ~name:proj phead plist ;
+		  user_type_select 
+			 (function None -> "" | Some x -> Int64.to_string x) 
+			 ~name:proj phead plist ;
 		  select_system ;
 		  planet_place ;
 		  button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
@@ -342,14 +370,13 @@ let new_planet_button project_id =
 			 {{ fun _ -> 
 				 ignore (Eliom_client.change_page  
 					  ~service:%new_planet_service () (Some %project_id)) }}]
-	 [badge_inverse [pcdata "+"]]
+	 [Badge.inverse [pcdata "+"]]
 *)
 let _ =
   action_register
 	 ~service:new_planet_service
 	 (fun user () (project,location) -> (
-		 lwt typ = Sdd.get_type location in
-		 lwt _ = Users.new_planet ?project user.id location typ in
+		 lwt _ = Users.new_planet ?project user.id location in
 		 Lwt.return ()
 	 ))
 
@@ -539,13 +566,6 @@ let make_admin_projects_list user =
   in 
   Lwt.return (ul (List.map aux projects))
 
-let make_free_planet_list project_id =
-  lwt users_list = Users.get_free_user project_id in
-  let aux (_id,user_name,count) = 
-	 li [pcdata (Printf.sprintf "%s : %Li free planets" user_name count)]
-  in 
-  Lwt.return (ul (List.map aux users_list))
-
 (* Decorate a tree according to various information 
    Used in the project_page *)
 
@@ -580,11 +600,11 @@ let menu () =
 	 ]
   in
   navbar 
-	 ~head:[pcdata "Eve PI"]
+	 ~head:[pcdata "Eveπ"]
 	 [menu 
 		 ~classes:["nav"] 
-		 elements () ; 
-	  disconnect_button
+		 elements () ;
+	  disconnect_button ;
 	 ]
 
 
@@ -602,15 +622,21 @@ let () =
   Connected.register
 	 ~service:main_service
 	 (fun () () -> 
-	  Lwt.return (
-			fun user ->
-			lwt form = new_planet_form user.id in
-			make_page 
-			  "Eve PI"
-			  [ center [h1 ~a:(classe "text-center") [pcdata "Welcome to EvePI"] ];
-				 form ;
-			  ]
-	 )) ;
+		Lwt.return (
+		  fun user ->
+			 lwt form = new_planet_form user.id in
+			 lwt planets = Users.get_planets_by_user_grouped_loc user.id in
+			 lwt planets = Lwt_list.map_s 
+				  (fun (id,x) ->
+					 lwt (name,typ,system) = Sdd.get_info id in Lwt.return (name,x)) 
+				  planets in
+			 make_page 
+				"Eve PI"
+				[ center [h1 ~a:(classe "text-center") [pcdata "Welcome to EvePI"] ];
+				  format_grouped_planet_list pcdata planets ;
+				  form ;
+				]
+		)) ;
 
   Connected.register 
 	 ~service:project_list_service
@@ -669,11 +695,11 @@ let () =
 	 (fun () () -> 
 	  Lwt.return (
 			fun user ->
-			lwt project_list = make_member_projects_list user.id in
+			lwt project_list = make_planet_list_by_project user.id in
 			make_page
 			  "Eve PI - My Projects"
 			  [ center [h2 [pcdata "Your Projects"]] ;
-				 project_list
+				 format_grouped_planet_list make_link_member_project project_list
 			  ]
 	 )) ;
 
@@ -704,7 +730,7 @@ let () =
 			  let admin_link = 
 				 if is_admin then
 					[ a ~service:project_admin_service 
-						 [badge_important [pcdata "admin panel"]] project ] 
+						 [Badge.important [pcdata "admin panel"]] project ] 
 				 else [] 
 			  in
 			  make_page

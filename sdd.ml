@@ -170,10 +170,14 @@ let get_planets_by_system system_name =
 		>>)
   >|= List.map (fun s -> s#!id, opt_string s#?name, opt_planet_type s#?typ)
 
-let get_type planet_name = 
+let get_info planet_id = 
   (view_one
-	  << { typ = planet.typeID } |
+	  << { name = planet.itemName ; 
+		  typ = planet.typeID ; 
+		  system = system.solarSystemName ; } |
 		planet in $mapDenormalize$ ;
-		planet.itemName = $string:planet_name$ ;
+		system in $mapSolarSystems$ ;
+		nullable system.solarSystemID = planet.solarSystemID ;
+		planet.itemID = $int32:planet_id$ ;
 		>>)
-	 >|= fun s -> id_to_planet (opt_planet_type s#?typ)
+	 >|= (fun s -> opt_string s#?name, id_to_planet (opt_planet_type s#?typ), opt_string s#?system)
