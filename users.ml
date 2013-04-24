@@ -294,7 +294,7 @@ let get_planets_by_project project =
 		 list_grouping (List.map (fun x -> x#!u, (x#!p, x#?prod)) l))
 
 let get_planets_by_project_user project user =
-  (view
+  (view ~log:stderr
 		  << { p = planet.id ; 
 		  loc = planet.location ;
         prod = planet.product_id } |

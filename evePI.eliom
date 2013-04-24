@@ -201,13 +201,17 @@ let new_project_form () =
 	 f (List.hd goals), List.map f (List.tl goals)
   in					
   Lwt.return (post_form ~a:(classe "form-inline")
-	 ~service:create_project_service
-	 (fun (name,(desc,goal)) -> [ fieldset ~legend:(legend [pcdata "Create a new project"]) [
-		 string_input ~a:[a_placeholder "Name"] ~input_type:`Text ~name:name () ;
-		 string_input ~a:[a_placeholder "Description"] ~input_type:`Text ~name:desc () ;
-		 int32_select ~name:goal ghd gtl ;
-		 button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
-	 ]]) ())
+		~service:create_project_service
+		(fun (name,(desc,goal)) -> 
+		  [ fieldset ~legend:(legend [pcdata "Create a new project"]) [
+				spancs ["input-prepend";"input-append"] [
+				  string_input ~a:[a_placeholder "Name"] 
+					 ~input_type:`Text ~name:name () ;
+				  string_input ~a:[a_placeholder "Description"] 
+					 ~input_type:`Text ~name:desc () ;
+				  int32_select ~name:goal ghd gtl ;
+				  button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
+				]]]) ())
 
 (* Rejoindre un projet *)
 
@@ -240,14 +244,16 @@ let make_projects_list user =
   and my_projects = Users.get_my_projects user in
   let make_button id name =
 	 if List.exists (fun (i,_) -> i = id) my_projects 
-	 then button ~a:(classes ["btn"; "disabled"]) ~button_type:`Button [pcdata "Already in !"]
+	 then button 
+		  ~a:(classes ["btn"; "disabled"]) 
+		  ~button_type:`Button [pcdata "Already in !"]
 	 else join_project_button id
   in
   let aux (id, name, desc) =
 	 ((dt [span ~a:[a_class ["btn-group"]] [
-					  make_link_project_page id name ; 
-					  make_button id name
-			]],[]),
+				make_link_project_page id name ; 
+				make_button id name
+			 ]],[]),
 	  (dd [pcdata desc],[]))
   in
   Lwt.return (List.map aux projects)
@@ -279,17 +285,17 @@ let format_grouped_planet_list format_group list =
 let make_planet_list_by_project user = 
   lwt projects = Users.get_my_projects user in
   let aux (id,name) = 
-	 lwt planets = Users.get_planets_by_project_user user id in
+	 lwt planets = Users.get_planets_by_project_user id user in
 	 Lwt.return ((id,name), planets)
   in 
-  Lwt_list.map_p aux projects
+  Lwt_list.map_s aux projects
 
 
 (* Nouvelle planete *)
 
-let list_to_select list = 
+let list_to_select s list = 
   let list = List.map (fun (id,name) -> Option ([],Some id,Some (pcdata name),true)) list in
-  let head = Option ([],None,Some (pcdata ""),true) in
+  let head = Option ([],None,Some (pcdata s),true) in
   head,list
 
 let list_to_raw_select list = 
@@ -334,14 +340,14 @@ let new_planet_service =
 	  Lwt.async (fun () -> 
 		 Typeahead.apply 
 			~source:slist  
-			~items:4
+			~items:6
 			~updater
 			select_system ; 
 		 Lwt.return () )
  }}
 
 let new_planet_form user =
-  lwt phead,plist = Users.get_my_projects user >|= list_to_select in
+  lwt phead,plist = Users.get_my_projects user >|= list_to_select "No project" in
   lwt slist = Sdd.get_systems () >|= List.map snd in
   let form_fun (proj,location) =
 	 let select_system = 
@@ -350,19 +356,25 @@ let new_planet_form user =
 						  a_placeholder "Location"; 
 						  lclasse ".typeahead"] () in
 	 let planet_place = span [] in
-	 ignore {unit{ select_system_handler %slist %location %planet_place %select_system }} ;
+  let _ = {unit{ 
+				  select_system_handler 
+					 %slist %location 
+					 %planet_place %select_system }} in
 	 [ fieldset ~legend:(legend [pcdata "Create a new planet"]) [
+		spancs ["input-prepend";"input-append"] [
 		  user_type_select 
-			 (function None -> "" | Some x -> Int64.to_string x) 
+			 (function None -> "" | Some x -> Int64.to_string x)
 			 ~name:proj phead plist ;
 		  select_system ;
 		  planet_place ;
 		  button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
-		]]
+		]]]
   in
-  Lwt.return (post_form ~a:(classe "form-inline")
+  Lwt.return (
+	 post_form ~a:(classe "form-inline")
 		~service:new_planet_service
 		form_fun ())
+
 (*
 let new_planet_button project_id =
   Raw.a
