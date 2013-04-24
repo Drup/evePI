@@ -1,4 +1,4 @@
-.navbar-form > .btn {
+/*.navbar-form > .btn {
   padding: 10px 15px ;
   margin-top: 0px ;
   border-style: none ;
@@ -9,12 +9,28 @@
 
 .navbar-form > .btn:hover {
   color: rgb(51, 51, 51);
-}
+}*/
 
 * {
-    font-family: sans-serif;
 	 margin: 0; padding: 0;
 }
+
+
+.planet {
+	 display: inline-block;
+	 width: 13px ;
+	 height: 13px ;
+	 padding : 1px ;
+	 margin-top: 1px;
+	 margin-right: 1px;
+	 line-height: 14px;
+	 vertical-align: text-top;
+	 background-image: url("../img/planet.png") ;
+	 background-size: cover;
+	 background-repeat: no-repeat;
+	 background-position: 0      0;
+}
+
 
 .planet-list {
 	 margin: 0px !important ;
