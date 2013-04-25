@@ -1,5 +1,22 @@
 
+html, body {
+	 height: 100%;
+	 margin: 0px ;
+}
 
+body {
+	 background-image : url("../img/bgplanet.jpg") ;
+	 background-size : cover ;
+	 background-color : transparent ;
+	 background-attachment: fixed ;
+	 background-position: center top ;
+}
+
+.main {
+	 background-color : rgba(0,0,0,0.8);
+	 padding: 0 10px ;
+	 height: 100%;
+}
 
 .planet {
 	 display: inline-block;

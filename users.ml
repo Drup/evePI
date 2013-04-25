@@ -92,7 +92,6 @@ let get_all_projects () =
   >|= List.map (fun r -> r#!id, r#!name, r#!description)
 					
 
-(* TODO utiliser un outer join ! *)
 let get_my_projects id =
   (view
 		  << {id = project.id ; name = project.name } |
@@ -294,7 +293,7 @@ let get_planets_by_project project =
 		 list_grouping (List.map (fun x -> x#!u, (x#!p, x#?prod)) l))
 
 let get_planets_by_project_user project user =
-  (view ~log:stderr
+  (view
 		  << { p = planet.id ; 
 		  loc = planet.location ;
         prod = planet.product_id } |
@@ -305,7 +304,7 @@ let get_planets_by_project_user project user =
   >|= List.map (fun x -> x#!p,x#!loc,x#?prod)
 
 let get_free_user project_id = 
-  (view ~log:stderr
+  (view
 		  << group { id = u_id ; name = u_name ; planets = count[planet.id] } by {u_id = planet.user_id ; u_name = user.name } |
 			planet in $planets$ ;
 			user in $users$ ;

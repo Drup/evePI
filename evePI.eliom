@@ -604,29 +604,46 @@ let decorate_trees project =
 
 (** Le menu *)
 
-let menu () =
+let menu user =
   let elements =
 	 [main_service, [pcdata "Home"] ;
 	  project_list_service, [pcdata "Projects"] ;
 	  project_member_service, [pcdata "Your Projects"] ;
 	 ]
   in
-  navbar 
-	 ~head:[pcdata "Eveπ"]
-	 [menu 
-		 ~classes:["nav"] 
-		 elements () ;
-	  disconnect_button ;
-	 ]
+  lwt projects = Users.get_my_projects user in
+  let projects = List.map (fun x -> li [make_link_member_project x]) projects in
+  let projects = [li [Raw.a [pcdata "No project yet !"]]] in
+  Lwt.return (navbar 
+		~classes:["navbar-static-top"]
+		~head:[pcdata "Eveπ"]
+		[menu 
+			~classes:["nav"] 
+			elements 
+			~postfix:[
+			  li ~a:(classe "dropdown") [
+				 Raw.a ~a:[
+					lclasse "dropdown-toggle" ;
+					a_user_data "toggle" "dropdown" ;
+					a_href (uri_of_string (fun () -> "#")) ;
+				 ] 
+					[pcdata "Projects"; b ~a:(classe "carret") []] ;
+				 ul ~a:[lclasse "dropdown-menu"]
+					projects ;
+			  ]]
+			() ;
+		 disconnect_button ;
+		])
 
 
 (** Quelques utilitaires *)
 
-let make_page ?(css=[]) title body =
+let make_page ?(css=[]) user title body =
+  lwt menu = menu user in
   make_page 
 	 ~css:(["css";"evePI.css"]::css)
 	 title
-	 [ divc "container" (menu () :: body) ]
+	 (menu :: [ divcs ["main";"container"] body ])
 
 (** The real thing *)
 
@@ -643,6 +660,7 @@ let () =
 					 lwt (name,typ,system) = Sdd.get_info id in Lwt.return (name,x)) 
 				  planets in
 			 make_page 
+				user.id
 				"Eve PI"
 				[ center [h1 ~a:(classe "text-center") [pcdata "Welcome to EvePI"] ];
 				  format_grouped_planet_list pcdata planets ;
@@ -653,113 +671,121 @@ let () =
   Connected.register 
 	 ~service:project_list_service
 	 (fun () () ->
-	  Lwt.return (
-			fun user ->
-			lwt projects_list = make_projects_list user.id in
-			lwt project_form = new_project_form () in
-			make_page
-			  "Eve PI - Projects"
-			  [ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
-				 dl ~a:(classes []) projects_list ;
-				 project_form ;
-			  ]
-	 )) ;
-  
+		Lwt.return (
+		  fun user ->
+			 lwt projects_list = make_projects_list user.id in
+			 lwt project_form = new_project_form () in
+			 make_page
+				user.id
+				"Eve PI - Projects"
+				[ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
+				  dl ~a:(classes []) projects_list ;
+				  project_form ;
+				]
+		)) ;
+
   Connected.register
 	 ~service:project_admin_service
 	 (fun project () -> 
-	  Lwt.return (
-			fun user ->
-			let not_exist () = 
-			  make_page
-				 ("Eve PI - My Projects")
-				 [ center [h2 [pcdata "This project doesn't exist"]]
-				 ] in
-			let not_admin () = 
-			  lwt project_name = Users.get_project_name project in
-			  make_page 
-				 ("Eve PI - Oups") 
-				 [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
-					center [h1 [pcdata "GO AWAY !"]] ] in
-			let regular_page () = 
-			  lwt project_name = Users.get_project_name project in
-			  lwt roots_id = Users.get_roots project in
-			  lwt planets = specialize_planet_form project in
-			  make_page
-				 ("Eve PI - Admin - "^ project_name)
-				 [ center [h2 [pcdata "Admin panel for the project : " ; 
-									em [pcdata project_name] ]] ;
-					planets ;
-				 ] in
-			lwt exist = Users.exist_project project in
-			if not exist then 
-			  not_exist () 
-			else
-			  lwt is_admin = Users.is_admin project user.id in
-			  if not is_admin then
-				 not_admin ()
-			  else
-				 regular_page ()
-	 )) ;
-  
+		Lwt.return (
+		  fun user ->
+			 let not_exist () = 
+				make_page
+				  user.id
+				  ("Eve PI - My Projects")
+				  [ center [h2 [pcdata "This project doesn't exist"]]
+				  ] in
+			 let not_admin () = 
+				lwt project_name = Users.get_project_name project in
+				make_page 
+				  user.id
+				  ("Eve PI - Oups") 
+				  [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
+					 center [h1 [pcdata "GO AWAY !"]] ] in
+			 let regular_page () = 
+				lwt project_name = Users.get_project_name project in
+				lwt roots_id = Users.get_roots project in
+				lwt planets = specialize_planet_form project in
+				make_page
+				  user.id
+				  ("Eve PI - Admin - "^ project_name)
+				  [ center [h2 [pcdata "Admin panel for the project : " ; 
+									 em [pcdata project_name] ]] ;
+					 planets ;
+				  ] in
+			 lwt exist = Users.exist_project project in
+			 if not exist then 
+				not_exist () 
+			 else
+				lwt is_admin = Users.is_admin project user.id in
+				if not is_admin then
+				  not_admin ()
+				else
+				  regular_page ()
+		)) ;
+
   Connected.register
 	 ~service:project_member_service
 	 (fun () () -> 
-	  Lwt.return (
-			fun user ->
-			lwt project_list = make_planet_list_by_project user.id in
-			make_page
-			  "Eve PI - My Projects"
-			  [ center [h2 [pcdata "Your Projects"]] ;
-				 format_grouped_planet_list make_link_member_project project_list
-			  ]
-	 )) ;
+		Lwt.return (
+		  fun user ->
+			 lwt project_list = make_planet_list_by_project user.id in
+			 make_page
+				user.id
+				"Eve PI - My Projects"
+				[ center [h2 [pcdata "Your Projects"]] ;
+				  format_grouped_planet_list make_link_member_project project_list
+				]
+		)) ;
 
   Connected.register
 	 ~service:project_member_coservice
 	 (fun project () -> 
-	  Lwt.return (
-			fun user ->
-			let not_exist () = 
-			  make_page
-				 ("Eve PI - My Projects")
-				 [ center [h2 [pcdata "This project doesn't exist"]]
-				 ] in
-			let not_attached () = 
-			  lwt project_name = Users.get_project_name project in
-			  make_page
-				 ("Eve PI - My Projects - "^ project_name)
-				 [ center [h2 [pcdata "Project : " ; 
-									em [pcdata project_name]]] ;
-					h3 [pcdata "You are not attached to this project " ; 
-						 join_project_button project
-						]
-				 ] in
-			let regular_page () =
-			  lwt project_name = Users.get_project_name project in
-			  lwt is_admin = Users.is_admin project user.id in
-			  lwt trees = decorate_trees project in
-			  let admin_link = 
-				 if is_admin then
-					[ a ~service:project_admin_service 
-						 [Badge.important [pcdata "admin panel"]] project ] 
-				 else [] 
-			  in
-			  make_page
-				 ("Eve PI - My Projects - "^ project_name)
-				 [ center [h2 ([pcdata "Project : " ; 
-									 em [pcdata project_name] ; 
-									 pcdata " " ] @ admin_link)] ;
-					trees ;
-				 ] in
-			lwt exist = Users.exist_project project in
-			if not exist then 
-			  not_exist () 
-			else
-			  lwt is_attached = Users.is_attached project user.id in 
-			  if not is_attached then
-				 not_attached ()
-			  else
-				 regular_page ()
-	 )) ;
+		Lwt.return (
+		  fun user ->
+			 let not_exist () = 
+				make_page
+				  user.id
+				  ("Eve PI - My Projects")
+				  [ center [h2 [pcdata "This project doesn't exist"]]
+				  ] in
+			 let not_attached () = 
+				lwt project_name = Users.get_project_name project in
+				make_page
+				  user.id
+				  ("Eve PI - My Projects - "^ project_name)
+				  [ center [h2 [pcdata "Project : " ; 
+									 em [pcdata project_name]]] ;
+					 h3 [pcdata "You are not attached to this project " ; 
+						  join_project_button project
+						 ]
+				  ] in
+			 let regular_page () =
+				lwt project_name = Users.get_project_name project in
+				lwt is_admin = Users.is_admin project user.id in
+				lwt trees = decorate_trees project in
+				let admin_link = 
+				  if is_admin then
+					 [ a ~service:project_admin_service 
+						  [Badge.important [pcdata "admin panel"]] project ] 
+				  else [] 
+				in
+				make_page
+				  user.id
+				  ("Eve PI - My Projects - "^ project_name)
+				  [ center [h2 ([pcdata "Project : " ; 
+									  em [pcdata project_name] ; 
+									  pcdata " " ] @ admin_link)] ;
+					 trees ;
+				  ] in
+			 lwt exist = Users.exist_project project in
+			 if not exist then 
+				not_exist () 
+			 else
+				lwt is_attached = Users.is_attached project user.id in 
+				if not is_attached then
+				  not_attached ()
+				else
+				  regular_page ()
+		)) ;
   

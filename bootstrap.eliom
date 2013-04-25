@@ -11,8 +11,8 @@ let make_page ?(a=[]) ?(css=[]) ?(js=[]) s bodyl =
 		~title:s
 		~a:a
 		~css:(
-		  ["css";"bootstrap-responsive.min.css"] ::
-			 ["css";"bootstrap.min.css"] ::
+		  ["css";"bootstrap.min.css"] ::
+			 ["css";"bootstrap-responsive.min.css"] ::
 			 css
 		)
 		~js:(["js";"jquery.js"] :: ["js";"bootstrap.min.js"] :: js)
@@ -135,8 +135,9 @@ let navbar ?(classes=[]) ?head ?(head_classes=[]) menu =
 	 | None -> menu
   in
   divcs ("navbar"::classes) [
-	 divc "navbar-inner" body
-  ]
+	 divc "navbar-inner" [
+		divc "container" body
+	 ]]
 
 (** Typeahead
   http://twitter.github.io/bootstrap/javascript.html#typeahead *)
