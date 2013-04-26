@@ -16,6 +16,7 @@ How to install it
 For now, you need to have two pgsql databases : 
 - One named eveSDD containing the [SDD](http://wiki.eve-id.net/CCP_Static_Data_Dump); 
 - One named evePI with the schema [syntax.sql](schema.sql).  
+
 Those should be accessible in local. You can then use ocsigen as described in the [Readme](README).
 
 No, it's not very flexible, it will change ...

@@ -1,4 +1,4 @@
-Lot's of things to do !
+Lot of things to do !
 
 Boring bits :
 * Refactoring ... really.
