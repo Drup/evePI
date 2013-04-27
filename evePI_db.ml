@@ -83,6 +83,7 @@ let get_currval seq =
 
 
 (** {1 Projects} *)
+(*****************)
 
 module Project = struct 
 let exist project = 
@@ -137,7 +138,7 @@ let get_details project_id =
   >|= (fun r -> r#!name, r#!descr)
 
 let get_name project_id = 
-  get_project_details project_id >|= fst
+  get_details project_id >|= fst
 				
   
 (** Project tree related queries *)
@@ -201,6 +202,7 @@ end
 
 
 (** {1 Planets} *)
+(****************)
 
 module Planet = struct 
 
@@ -258,7 +260,7 @@ let fetch_by_user_group_loc user =
   list_grouping (List.map 
 		(fun x -> x#!loc, (x#!p, x#?proj, x#?prod)) l))
 
-let fetch_by_product product =
+let fetch_by_node product =
   (view
 	  << group { p = count[planet.id] ; u = u_ }
 		  by { u_ = user.name } |
@@ -312,6 +314,8 @@ end
 
 
 (** {1 Users} *)
+(**************)
+
 module User = struct
 
 let exist name =
@@ -332,55 +336,61 @@ let get_id name =
 exception User_allready_exists
 
 let create name pwd =
-  lwt b = exists_user name in
-  if not b then 
+  lwt b = exist name in
+  if not b then
+	let h = Bcrypt.string_of_hash (Bcrypt.hash pwd) in
 	query
-   <:insert< $users$ :=
-			{ id = users?id ;
-			name = $string:name$ ; 
-			password = $string:pwd$  } >>
+	  <:insert< $users$ :=
+			   { id = users?id ;
+			   name = $string:name$ ; 
+			   password = $string:h$  } >>
   else raise_lwt User_allready_exists
 
 (* TODO : make password secure *)
 let check_pwd name pwd =
-  (view
-		  <:view< {password = user.password} |
+  (view_one
+	 <:view< {p = user.password} |
 			user in $users$;
-			user.name = $string:name$;
-			user.password = $string:pwd$ >>)
-  >|= (function [] -> false | _ -> true)
+			user.name = $string:name$ 
+  >>)
+  >|= (fun s -> Bcrypt.verify pwd (Bcrypt.hash_of_string s#!p))
 
 let attach project user =
   query 
-		  <:insert< $projects_users$ := {
-			project_id = $int64:project$ ;
-			user_id = $int64:user$ 
-			} >>
+	<:insert< $projects_users$ := {
+			 project_id = $int64:project$ ;
+			 user_id = $int64:user$ 
+			 } >>
 
 let is_attached project user =
   (query
-			<:select< row |
-			 row in $projects_users$ ;
-			 row.user_id = $int64:user$ ;
-			 row.project_id = $int64:project$ ;
-			 >>)
+	 <:select< row |
+			  row in $projects_users$ ;
+			  row.user_id = $int64:user$ ;
+			  row.project_id = $int64:project$ ;
+			  >>)
   >|= (function [] -> false | _ -> true)
 
-(** Admin stuff *)
+end
+
+
+(** {1 Admin} *)
+(**************)
+
 module Admin = struct 
 let promote project user =
   query
 	<:insert< $projects_admins$ :=
-		  { project_id = $int64:project$;
-		  user_id = $int64:user$ ;
-		  } >>
- 
+			 { project_id = $int64:project$;
+			 user_id = $int64:user$ ;
+			 } >>
+
 let is_admin project user = 
   (query
-			<:select< row |
-			 row in $projects_admins$ ;
-			 row.user_id = $int64:user$ ;
-			 row.project_id = $int64:project$ ;
-			 >>)
+	 <:select< row |
+			  row in $projects_admins$ ;
+			  row.user_id = $int64:user$ ;
+			  row.project_id = $int64:project$ ;
+			  >>)
   >|= (function [] -> false | _ -> true)
 end
