@@ -7,6 +7,8 @@ open Eliom_content.Html5.D
 open Bootstrap
 }}
 
+open EvePI_db
+
 module EvePI_app =
   Eliom_registration.App (
   struct
@@ -33,9 +35,9 @@ let _ =
   Eliom_registration.Redirection.register
     ~service:connection_service
     (fun () (name, password) ->
-      lwt b = Users.check_pwd name password in
+      lwt b = User.check_pwd name password in
       if b then (
-        lwt id = Users.get_user_id name in
+        lwt id = User.get_id name in
         lwt _ = Eliom_reference.set user (Some { id ; name }) in
         Lwt.return Eliom_service.void_coservice'
       ) else (
@@ -53,7 +55,7 @@ let create_account_service =
 let _ =
   Eliom_registration.Action.register
     ~service:create_account_service
-    (fun () (name, pwd) -> Users.add_user name pwd)
+    (fun () (name, pwd) -> User.create name pwd)
 
 let login_name_form service button_text =
   post_form ~a:(classe "form-horizontal")
@@ -184,12 +186,12 @@ let _ =
     ~redir:project_list_service
     ~service:create_project_service
     (fun admin () (project,(desc,goal)) -> (
-        lwt project_id = Users.new_project project desc in
-        lwt _ = Users.attach_admin project_id admin.id in
-        lwt _ = Users.attach_user project_id admin.id in
+        lwt project_id = Project.create project desc in
+        lwt _ = Admin.promote project_id admin.id in
+        lwt _ = User.attach project_id admin.id in
         lwt tree = 
           Tree.make (fun id -> (Sdd.get_sons id) >|= List.map fst) goal in 
-        lwt _ = Users.fill_project_tree project_id tree in
+        lwt _ = Project.fill_tree project_id tree in
         Lwt.return ()
       ))
 
@@ -233,15 +235,15 @@ let _ =
   action_register
     ~service:join_project_service
     (fun user () project -> (
-        lwt _ = Users.attach_user project user.id in
+        lwt _ = User.attach project user.id in
         Lwt.return ()
       ))
 
 
 (* La liste de projet - html *)
 let make_projects_list user = 
-  lwt projects = Users.get_all_projects () 
-  and my_projects = Users.get_my_projects user in
+  lwt projects = Project.fetch_all () 
+  and my_projects = Project.fetch_by_user user in
   let make_button id name =
     if List.exists (fun (i,_) -> i = id) my_projects 
     then button 
@@ -263,7 +265,7 @@ let make_projects_list user =
 (** Gestion des planetes *)
 
 let make_free_planet_list project_id =
-  lwt users_list = Users.get_free_user project_id in
+  lwt users_list = Planet.fetch_free_by_user project_id in
   let aux (_id,user_name,count) = 
     li [pcdata (Printf.sprintf "%s : %Li free planets" user_name count)]
   in 
@@ -283,9 +285,9 @@ let format_grouped_planet_list format_group list =
   divc "planet-list" [dl ~a:(classe "dl-horizontal") (List.map aux_group list)]
 
 let make_planet_list_by_project user = 
-  lwt projects = Users.get_my_projects user in
+  lwt projects = Project.fetch_by_user user in
   let aux (id,name) = 
-    lwt planets = Users.get_planets_by_project_user id user in
+    lwt planets = Planet.fetch_by_project_user id user in
     Lwt.return ((id,name), planets)
   in 
   Lwt_list.map_s aux projects
@@ -347,7 +349,7 @@ let select_system_handler slist location planet_div select_system =
 }}
 
 let new_planet_form user =
-  lwt phead,plist = Users.get_my_projects user >|= list_to_select "No project" in
+  lwt phead,plist = Project.fetch_by_user user >|= list_to_select "No project" in
   lwt slist = Sdd.get_systems () >|= List.map snd in
   let form_fun (proj,location) =
     let select_system = 
@@ -379,7 +381,7 @@ let _ =
   action_register
     ~service:new_planet_service
     (fun user () (project,location) -> (
-        lwt _ = Users.new_planet ?project user.id location in
+        lwt _ = Planet.create ?project user.id location in
         Lwt.return ()
       ))
 
@@ -390,7 +392,7 @@ let attach_planet_service =
     ~post_params:Eliom_parameter.(int64 "planet" ** int64 "project") ()
 
 let attach_planet_form user planet =
-  lwt project_list = Users.get_my_projects user in
+  lwt project_list = Project.fetch_by_user user in
   let project_list = 
     List.map (fun (id,name) -> Option ([],id,Some (pcdata name),true)) project_list in
   let head = Option ([],Int64.zero,Some (pcdata ""),false) in
@@ -405,7 +407,7 @@ let _ =
   action_register
     ~service:attach_planet_service
     (fun user () (planet,project) -> (
-        lwt _ = Users.update_planet_project planet project in
+        lwt _ = Planet.update_project planet project in
         Lwt.return ()
       ))
 
@@ -419,10 +421,10 @@ let make_product_button form_prod (product_id,product_name,note) =
   int64_button ~name:form_prod ~value:product_id [pcdata product_name]
 
 let get_project_tree form_prod project = 
-  lwt roots_id = Users.get_roots project in
+  lwt roots_id = Project.get_roots project in
   let nodes = Hashtbl.create 20 in
   lwt trees = 
-    Tree.make_forest (fun (id,_,_) -> Users.get_sons id) roots_id in
+    Tree.make_forest (fun (id,_,_) -> Project.get_sons id) roots_id in
   let format_node (id, typeid, note) =
     lwt name = Sdd.get_name typeid in
     let button = make_product_button form_prod (id,name,note) in
@@ -508,7 +510,7 @@ type aux = Html5_types.input Eliom_content_core.Html5.elt ->
 }}
 
 let make_planet_list_form form_planet nodes project =
-  lwt planets_lists = Users.get_planets_by_project project in
+  lwt planets_lists = Planet.fetch_by_project project in
   let init_planet = {aux{ get_init_planet () }} in
   let make_planet_button (planet_id,node_id) = 
     let node = hashtbl_find nodes node_id in
@@ -531,7 +533,7 @@ let make_planet_list_form form_planet nodes project =
   Lwt.return (List.map aux_users planets_lists)
 
 let specialize_planet_form project = 
-  lwt project_name = Users.get_project_name project in
+  lwt project_name = Project.get_name project in
   let form_fun (form_planet,form_product) = 
     lwt nodes,trees = get_project_tree form_product project in
     lwt planet_list = make_planet_list_form form_planet nodes project in
@@ -549,7 +551,7 @@ let _ =
         match planet with
             None -> Lwt.return ()
           | Some planet -> 
-              lwt _ = Users.update_planet_product planet product in
+              lwt _ = Planet.update_product planet product in
               Lwt.return ()
       ))
 
@@ -563,7 +565,7 @@ let make_admin_project_link project_id project_name =
   a ~service:project_admin_service [pcdata project_name] project_id
 
 let make_admin_projects_list user = 
-  lwt projects = Users.get_my_admin_projects user in
+  lwt projects = Project.fetch_by_admin user in
   let aux (id,name) = 
     li [make_admin_project_link id name]
   in 
@@ -574,7 +576,7 @@ let make_admin_projects_list user =
 
 let decorate_tree_node (id,typeid,notes) = 
   lwt name = Sdd.get_name typeid in 
-  lwt users = Users.get_planets_by_product id in
+  lwt users = Planet.fetch_by_node id in
   let printer = function
       1 -> "1 planet"
     | n -> Printf.sprintf "%i planets" n in
@@ -588,9 +590,9 @@ let decorate_tree_node (id,typeid,notes) =
           ]])
 
 let decorate_trees project = 
-  lwt roots_id = Users.get_roots project in
+  lwt roots_id = Project.get_roots project in
   lwt trees = 
-    Tree.make_forest (fun (id,_,_) -> Users.get_sons id) roots_id in
+    Tree.make_forest (fun (id,_,_) -> Project.get_sons id) roots_id in
   Tree.Lwt.printf decorate_tree_node trees
 
 (** Le menu *)
@@ -602,26 +604,28 @@ let menu user =
      project_member_service, [pcdata "Your Projects"] ;
     ]
   in
-  lwt projects = Users.get_my_projects user in
+  lwt projects = Project.fetch_by_user user in
   let projects = List.map (fun x -> li [make_link_member_project x]) projects in
-  let projects = [li [Raw.a [pcdata "No project yet !"]]] in
+  let projects = match projects with
+	| [] -> []
+	| _ -> [
+	  li ~a:(classe "dropdown") 
+        (Raw.a ~a:[
+		   lclasse "dropdown-toggle" ;
+		   a_user_data "toggle" "dropdown" ;
+		   a_href (uri_of_string (fun () -> "#")) ;
+         ]
+		   [pcdata "Projects"; b ~a:(classe "carret") []] ::
+		   [ul ~a:[lclasse "dropdown-menu"] projects])
+	]
+  in 
   Lwt.return (navbar 
       ~classes:["navbar-static-top"]
       ~head:[pcdata "Eveπ"]
       [menu 
          ~classes:["nav"] 
          elements 
-         ~postfix:[
-           li ~a:(classe "dropdown") [
-             Raw.a ~a:[
-               lclasse "dropdown-toggle" ;
-               a_user_data "toggle" "dropdown" ;
-               a_href (uri_of_string (fun () -> "#")) ;
-             ] 
-               [pcdata "Projects"; b ~a:(classe "carret") []] ;
-             ul ~a:[lclasse "dropdown-menu"]
-               projects ;
-           ]]
+         ~postfix:projects
          () ;
        disconnect_button ;
       ])
@@ -645,7 +649,7 @@ let () =
       Lwt.return (
         fun user ->
           lwt form = new_planet_form user.id in
-          lwt planets = Users.get_planets_by_user_grouped_loc user.id in
+          lwt planets = Planet.fetch_by_user_group_loc user.id in
           lwt planets = Lwt_list.map_s 
               (fun (id,x) ->
                 lwt (name,typ,system) = Sdd.get_info id in Lwt.return (name,x)) 
@@ -687,15 +691,15 @@ let () =
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_admin () = 
-            lwt project_name = Users.get_project_name project in
+            lwt project_name = Project.get_name project in
             make_page 
               user.id
               ("Eve PI - Oups") 
               [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
                 center [h1 [pcdata "GO AWAY !"]] ] in
           let regular_page () = 
-            lwt project_name = Users.get_project_name project in
-            lwt roots_id = Users.get_roots project in
+            lwt project_name = Project.get_name project in
+            lwt roots_id = Project.get_roots project in
             lwt planets = specialize_planet_form project in
             make_page
               user.id
@@ -704,11 +708,11 @@ let () =
                             em [pcdata project_name] ]] ;
                 planets ;
               ] in
-          lwt exist = Users.exist_project project in
+          lwt exist = Project.exist project in
           if not exist then 
             not_exist () 
           else
-            lwt is_admin = Users.is_admin project user.id in
+            lwt is_admin = Admin.is_admin project user.id in
             if not is_admin then
               not_admin ()
             else
@@ -741,7 +745,7 @@ let () =
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_attached () = 
-            lwt project_name = Users.get_project_name project in
+            lwt project_name = Project.get_name project in
             make_page
               user.id
               ("Eve PI - My Projects - "^ project_name)
@@ -752,8 +756,8 @@ let () =
                    ]
               ] in
           let regular_page () =
-            lwt project_name = Users.get_project_name project in
-            lwt is_admin = Users.is_admin project user.id in
+            lwt project_name = Project.get_name project in
+            lwt is_admin = Admin.is_admin project user.id in
             lwt trees = decorate_trees project in
             let admin_link = 
               if is_admin then
@@ -769,11 +773,11 @@ let () =
                              pcdata " " ] @ admin_link)] ;
                 trees ;
               ] in
-          lwt exist = Users.exist_project project in
+          lwt exist = Project.exist project in
           if not exist then 
             not_exist () 
           else
-            lwt is_attached = Users.is_attached project user.id in 
+            lwt is_attached = User.is_attached project user.id in 
             if not is_attached then
               not_attached ()
             else
