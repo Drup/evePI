@@ -7,106 +7,13 @@ open Eliom_content.Html5.D
 open Bootstrap
 }}
 
+open Skeleton
 open EvePI_db
+open Auth
 
-module EvePI_app =
-  Eliom_registration.App (
-  struct
-    let application_name = "evePI"
-  end)
 
-let main_service =
-  Eliom_service.service
-    ~path:[""] ~get_params:Eliom_parameter.unit ()
 
-(** Gestion de la connexion des utilisateurs **)
-
-type user = {id : int64 ; name : string}
-let user = Eliom_reference.eref ~scope:Eliom_common.default_session_scope None
-
-(* La connexion *)
-
-let connection_service =
-  Eliom_service.post_coservice'
-    ~post_params:Eliom_parameter.(string "name" ** string "password") ()
-
-(* TODO : faire une redirection en cas d'echec *)
-let _ = 
-  Eliom_registration.Redirection.register
-    ~service:connection_service
-    (fun () (name, password) ->
-      lwt b = User.check_pwd name password in
-      if b then (
-        lwt id = User.get_id name in
-        lwt _ = Eliom_reference.set user (Some { id ; name }) in
-        Lwt.return Eliom_service.void_coservice'
-      ) else (
-        Lwt.return Eliom_service.void_coservice'
-      )
-    )
-
-(* Création d'un compte *)
-
-let create_account_service =
-  Eliom_service.post_coservice
-    ~fallback:main_service
-    ~post_params:Eliom_parameter.(string "name" ** string "password") ()
-
-let _ =
-  Eliom_registration.Action.register
-    ~service:create_account_service
-    (fun () (name, pwd) -> User.create name pwd)
-
-let login_name_form service button_text =
-  post_form ~a:(classe "form-horizontal")
-    ~service
-    (fun (name1, name2) ->
-      [divc 
-         "control-group" [
-         label ~a:(a_for name1 :: classe "control-label") [pcdata "login: "];
-         divc "controls" [string_input ~input_type:`Text ~name:name1 ()] ;
-       ] ;
-       divc 
-         "control-group" [
-         label ~a:(a_for name2 :: classe "control-label") [pcdata "password: "];
-         divc "controls" [string_input ~input_type:`Password ~name:name2 ()] ;
-       ] ;
-       divc 
-         "control-group" [
-         divc "controls" 
-           [string_input 
-              ~a:(classes ["btn";"btn-primary"]) 
-              ~input_type:`Submit ~value:button_text ()]
-       ] ;
-      ]) ()
-
-(* La deconnexion *)
-
-let disconnection_service =
-  Eliom_service.post_coservice'
-    ~post_params:Eliom_parameter.unit ()
-
-let disconnect_button =
-  post_form 
-    ~a:(classes ["navbar-form";"pull-right"]) 
-    ~service:disconnection_service
-    (fun () -> [
-      button 
-        ~a:(classes ["btn";"btn-danger"])
-        ~button_type:`Submit [pcdata "Log out"] ]) ()
-
-let _ = 
-  Eliom_registration.Redirection.register
-    ~service:disconnection_service
-    (fun () () -> 
-      lwt _ = Eliom_state.discard ~scope:Eliom_common.default_session_scope () in 
-      Lwt.return (Eliom_service.void_coservice')
-    )
-
-(** Le Module Connected
-    Permet de considérer qu'on est toujours connecté et servir une page par defaut quand ce n'est pas le cas *)
-
-(* La page par défaut *)
+(** The Default page if you are not logged in *)
 let default_content () =
   make_page "EvePI" [
     container
@@ -121,34 +28,8 @@ let default_content () =
         ];
       ]]
 
-module Connected_translate =
-struct
-  type page = user -> EvePI_app.page Lwt.t
-  let translate page =
-    match_lwt Eliom_reference.get user with
-      | None -> default_content ()
-      | Some user -> page user
-end
-
-module Connected =
-  Eliom_registration.Customize ( EvePI_app ) ( Connected_translate )
-
-let action_register action =
-  let f a b = 
-    match_lwt Eliom_reference.get user with
-      | None ->  Lwt.return ()
-      | Some user -> action user a b
-  in
-  Eliom_registration.Action.register f
-
-let action_with_redir_register ?(redir=Eliom_service.void_coservice') action =
-  let f a b = 
-    match_lwt Eliom_reference.get user with
-      | None -> default_content () >>= EvePI_app.send
-      | Some user -> Eliom_registration.Redirection.send ((action user a b) ; redir)
-  in
-  Eliom_registration.Any.register f
-
+module Connected = Connected (struct let v = default_content end) 
+open Connected
 
 (** Mes projets *)
 let project_member_service =
@@ -635,10 +516,11 @@ let menu user =
 
 let make_page ?(css=[]) user title body =
   lwt menu = menu user in
-  make_page 
-    ~css:(["css";"evePI.css"]::css)
-    title
-    (menu :: [ divcs ["main";"container"] body ])
+  Lwt.return (
+	make_page 
+	  ~css:(["css";"evePI.css"]::css)
+	  title
+	  (menu :: [ divcs ["main";"container"] body ]))
 
 (** The real thing *)
 

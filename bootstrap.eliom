@@ -1,23 +1,21 @@
 {shared{
 open Eliom_lib
 open Eliom_content
-open Eliom_content.Html5.F
+open Eliom_content.Html5.D
 }}
 (** Faire une page en bonne et due forme *)
 
 let make_page ?(a=[]) ?(css=[]) ?(js=[]) s bodyl = 
-  Lwt.return (
-    Eliom_tools.D.html
-      ~title:s
-      ~a:a
-      ~css:(
-        ["css";"bootstrap.min.css"] ::
-          ["css";"bootstrap-responsive.min.css"] ::
-          css
-      )
-      ~js:(["js";"jquery.js"] :: ["js";"bootstrap.min.js"] :: js)
-      (body bodyl)
-  )
+  Eliom_tools.D.html
+    ~title:s
+    ~a:a
+    ~css:(
+      ["css";"bootstrap.min.css"] ::
+        ["css";"bootstrap-responsive.min.css"] ::
+        css
+    )
+    ~js:(["js";"jquery.js"] :: ["js";"bootstrap.min.js"] :: js)
+    (body bodyl)
 
 (** Quelques utilitaires generiques *)
 
