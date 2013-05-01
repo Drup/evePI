@@ -1,5 +1,8 @@
 open Eliom_lib
 open Eliom_content
+open Eliom_content.Html5.D
+
+open Utility
 
 type 'a tree = Node of 'a * ('a tree list) | Leaf of 'a
 
@@ -20,30 +23,27 @@ let rec map f = function
 let mapf f = List.map (map f)
 
 let rec internal_print f = function
-  | Leaf node -> Html5.F.(li ~a:[a_class ["tree"]] (f node))
+  | Leaf node -> li ~a:[a_class ["tree"]] (f node)
   | Node (node, trees) ->
-      Html5.F.(
         li ~a:[a_class ["tree"]] 
           (f node @
            [ul ~a:[a_class ["tree"]] (List.map (internal_print f) trees)]
-          ))
+          )
 
 let print f t =
-  Html5.F.(
     div ~a:[a_class ["tree"]] 
-      [ul ~a:[a_class ["tree"]] [internal_print f t]])
+      [ul ~a:[a_class ["tree"]] [internal_print f t]]
 
 let printf f tl = 
-  Html5.F.(
     div ~a:[a_class ["tree"]] 
-      [ul ~a:[a_class ["tree"]] (List.map (internal_print f) tl)])
+      [ul ~a:[a_class ["tree"]] (List.map (internal_print f) tl)]
 
 let print_plain =
-  let f name = Html5.F.([div ~a:[a_class ["tree"]]  [pcdata name]]) in
+  let f name = [div ~a:[a_class ["tree"]]  [pcdata name]] in
   print f
 
 let printf_plain = 
-  let f name = Html5.F.([div ~a:[a_class ["tree"]]  [pcdata name]]) in
+  let f name = [div ~a:[a_class ["tree"]]  [pcdata name]] in
   printf f
 
 module Lwt = 
@@ -60,24 +60,26 @@ struct
 
   let rec internal_print f = function
     | Leaf node -> lwt node = f node in 
-        Lwt.return (Html5.F.(li ~a:[a_class ["tree"]] node))
+        Lwt.return (li ~a:[a_class ["tree"]] node)
     | Node (node, trees) ->
         lwt node = f node in
         lwt content = Lwt_list.map_s (internal_print f) trees in
-        Lwt.return Html5.F.(
+        Lwt.return (
             li ~a:[a_class ["tree"]]  (node @ [ul ~a:[a_class ["tree"]]  content]
             ))
 
   let print f t =
     lwt t = internal_print f t in 
-    Lwt.return Html5.F.(
+    Lwt.return (
         div ~a:[a_class ["tree"]] 
           [ul ~a:[a_class ["tree"]] [t]])
 
   let printf f tl = 
     lwt tl = Lwt_list.map_s (internal_print f) tl in 
-    Lwt.return Html5.F.(
+    Lwt.return (
         div ~a:[a_class ["tree"]] 
           [ul ~a:[a_class ["tree"]]  tl])
 
 end		
+
+

@@ -6,7 +6,6 @@ open Eliom_tools
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
-open Structure
 open EvePI_db
 open Bootstrap
 
@@ -27,9 +26,9 @@ let _ =
   Eliom_registration.Redirection.register
     ~service:connection_service
     (fun () (name, password) ->
-      lwt b = User.check_pwd name password in
+      lwt b = QUser.check_pwd name password in
       if b then (
-        lwt id = User.get_id name in
+        lwt id = QUser.get_id name in
         lwt _ = Eliom_reference.set user (Some { id ; name }) in
         Lwt.return Eliom_service.void_coservice'
       ) else (
@@ -40,14 +39,13 @@ let _ =
 (** {1 Account creation} *)
 
 let create_account_service =
-  Eliom_service.post_coservice
-    ~fallback:main_service
+  Eliom_service.post_coservice'
     ~post_params:Eliom_parameter.(string "name" ** string "password") ()
 
 let create_account_service =
   Eliom_registration.Action.register_post_coservice'
     ~post_params:Eliom_parameter.(string "name" ** string "password")
-    (fun () (name, pwd) -> User.create name pwd)
+    (fun () (name, pwd) -> QUser.create name pwd)
 
 (** Form to create or to connect an account *)
 let login_name_form service button_text =
@@ -104,20 +102,24 @@ sig
   val v : unit -> Html5_types.html Eliom_content.Html5.elt
 end
 
-module Connected_translate ( Default : Default_content) =
+module Connected_translate 
+	(Default : Default_content) 
+	(App : Eliom_registration.ELIOM_APPL) =
 struct
-  type page = user -> EvePI_app.page Lwt.t
-  let translate page =
+  type page = user -> App.page Lwt.t
+  let translate page : App.page Lwt.t =
     match_lwt Eliom_reference.get user with
       | None -> Lwt.return (Default.v ())
       | Some user -> page user
 end
 
-module Connected ( Default : Default_content ) =
+module Connected 
+	(Default : Default_content )
+	(App : Eliom_registration.ELIOM_APPL) =
 struct 
   include Eliom_registration.Customize 
-	  ( EvePI_app ) 
-	  ( Connected_translate (Default) )
+	  ( App ) 
+	  ( Connected_translate (Default) (App) )
 
   let action_register action =
 	let f = 
@@ -132,9 +134,9 @@ struct
 	let f = 
 	  wrap_handler 
 		(fun () -> Eliom_reference.get user)
-		(fun _ _ -> EvePI_app.send (Default.v ()))
+		(fun _ _ -> App.send (Default.v ()))
 		(fun u g p -> 
-		  Eliom_registration.Redirection.send ((action u g p) ; redir))
+		   Eliom_registration.Redirection.send ((action u g p) ; redir))
 	in
 	Eliom_registration.Any.register f
 

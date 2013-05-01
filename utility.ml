@@ -20,3 +20,9 @@ let list_grouping l =
 	 | (x,y)::t when x = a -> (a,b::y)::t
 	 | _ -> (a,[b])::l
   in List.fold_left aux [] l
+
+(** Hshtbl *)
+
+let hashtbl_find tbl = function
+  | Some id -> Some (Hashtbl.find tbl id)
+  | None -> None 

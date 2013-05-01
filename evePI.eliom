@@ -7,56 +7,17 @@ open Eliom_content.Html5.D
 open Bootstrap
 }}
 
-open Skeleton
-open EvePI_db
 open Auth
+open Skeleton
+open Skeleton.Connected
+open EvePI_db
+open Widget
 
 
 
-(** The Default page if you are not logged in *)
-let default_content () =
-  make_page "EvePI" [
-    container
-      ~head:[h1 ~a:(classe "text-center")  [pcdata "Welcome to EvePI"]]
-      [ 6, [ 
-          h2 ~a:(classe "text-center") [pcdata "Log in"] ;
-          login_name_form connection_service "Connect" ;
-        ] ;
-        6, [
-          h2 ~a:(classe "text-center") [pcdata "Create account"] ;
-          login_name_form create_account_service "Create account" ;
-        ];
-      ]]
 
-module Connected = Connected (struct let v = default_content end) 
-open Connected
 
-(** Mes projets *)
-let project_member_service =
-  Eliom_service.service
-    ~path:["myprojects";""] 
-    ~get_params:Eliom_parameter.unit ()
-
-let project_member_coservice =
-  Eliom_service.service
-    ~path:["projects"] 
-    ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
-
-let make_link_member_project (project_id,project_name) = 
-  a ~service:project_member_coservice [pcdata project_name] project_id
-
-let make_link_project_page project_id project_name = 
-  a ~a:(classe "btn") ~service:project_member_coservice [pcdata project_name] project_id
-
-(** Gestion des projets *)
-
-(* La liste de projet - service *)
-let project_list_service =
-  Eliom_service.service
-    ~path:["projects";""]
-    ~get_params:Eliom_parameter.unit ()
-
-(* La création de projet *)
+(** Service to create a project *)
 let create_project_service =
   Eliom_service.post_coservice
     ~fallback:project_list_service
@@ -67,12 +28,12 @@ let _ =
     ~redir:project_list_service
     ~service:create_project_service
     (fun admin () (project,(desc,goal)) -> (
-        lwt project_id = Project.create project desc in
-        lwt _ = Admin.promote project_id admin.id in
-        lwt _ = User.attach project_id admin.id in
+        lwt project_id = QProject.create project desc in
+        lwt _ = QUser.attach project_id admin.id in
+        lwt _ = QAdmin.promote project_id admin.id in
         lwt tree = 
           Tree.make (fun id -> (Sdd.get_sons id) >|= List.map fst) goal in 
-        lwt _ = Project.fill_tree project_id tree in
+        lwt _ = QProject.fill_tree project_id tree in
         Lwt.return ()
       ))
 
@@ -96,82 +57,9 @@ let new_project_form () =
               button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
             ]]]) ())
 
-(* Rejoindre un projet *)
-
-let join_project_service = 
-  Eliom_service.post_coservice'
-    ~post_params:Eliom_parameter.(int64 "project") ()
-
-let join_project_button project_id =
-  button
-    ~button_type:`Button
-    ~a:[lclasses ["btn"] ; 
-        a_onclick 
-          {{ fun _ -> 
-             ignore (Eliom_client.change_page  
-                 ~service:%join_project_service () %project_id) }}]
-    [pcdata "Join now !"]
-
-let _ =
-  action_register
-    ~service:join_project_service
-    (fun user () project -> (
-        lwt _ = User.attach project user.id in
-        Lwt.return ()
-      ))
-
-
-(* La liste de projet - html *)
-let make_projects_list user = 
-  lwt projects = Project.fetch_all () 
-  and my_projects = Project.fetch_by_user user in
-  let make_button id name =
-    if List.exists (fun (i,_) -> i = id) my_projects 
-    then button 
-        ~a:(classes ["btn"; "disabled"]) 
-        ~button_type:`Button [pcdata "Already in !"]
-    else join_project_button id
-  in
-  let aux (id, name, desc) =
-    ((dt [span ~a:[a_class ["btn-group"]] [
-            make_link_project_page id name ; 
-            make_button id name
-          ]],[]),
-     (dd [pcdata desc],[]))
-  in
-  Lwt.return (List.map aux projects)
 
 
 
-(** Gestion des planetes *)
-
-let make_free_planet_list project_id =
-  lwt users_list = Planet.fetch_free_by_user project_id in
-  let aux (_id,user_name,count) = 
-    li [pcdata (Printf.sprintf "%s : %Li free planets" user_name count)]
-  in 
-  Lwt.return (ul (List.map aux users_list))
-
-let format_planet_list list = 
-  let aux_planet (id,info,prod) =
-    i
-      ~a:[lclasses ["planet"]]
-      [] in
-  List.map aux_planet list
-
-let format_grouped_planet_list format_group list = 
-  let aux_group (group, l) = 
-    (dt [format_group group],[]),(dd (format_planet_list l),[])
-  in
-  divc "planet-list" [dl ~a:(classe "dl-horizontal") (List.map aux_group list)]
-
-let make_planet_list_by_project user = 
-  lwt projects = Project.fetch_by_user user in
-  let aux (id,name) = 
-    lwt planets = Planet.fetch_by_project_user id user in
-    Lwt.return ((id,name), planets)
-  in 
-  Lwt_list.map_s aux projects
 
 
 (* Nouvelle planete *)
@@ -230,7 +118,7 @@ let select_system_handler slist location planet_div select_system =
 }}
 
 let new_planet_form user =
-  lwt phead,plist = Project.fetch_by_user user >|= list_to_select "No project" in
+  lwt phead,plist = QProject.fetch_by_user user >|= list_to_select "No project" in
   lwt slist = Sdd.get_systems () >|= List.map snd in
   let form_fun (proj,location) =
     let select_system = 
@@ -262,7 +150,7 @@ let _ =
   action_register
     ~service:new_planet_service
     (fun user () (project,location) -> (
-        lwt _ = Planet.create ?project user.id location in
+        lwt _ = QPlanet.create ?project user.id location in
         Lwt.return ()
       ))
 
@@ -273,7 +161,7 @@ let attach_planet_service =
     ~post_params:Eliom_parameter.(int64 "planet" ** int64 "project") ()
 
 let attach_planet_form user planet =
-  lwt project_list = Project.fetch_by_user user in
+  lwt project_list = QProject.fetch_by_user user in
   let project_list = 
     List.map (fun (id,name) -> Option ([],id,Some (pcdata name),true)) project_list in
   let head = Option ([],Int64.zero,Some (pcdata ""),false) in
@@ -288,7 +176,7 @@ let _ =
   action_register
     ~service:attach_planet_service
     (fun user () (planet,project) -> (
-        lwt _ = Planet.update_project planet project in
+        lwt _ = QPlanet.update_project planet project in
         Lwt.return ()
       ))
 
@@ -302,10 +190,10 @@ let make_product_button form_prod (product_id,product_name,note) =
   int64_button ~name:form_prod ~value:product_id [pcdata product_name]
 
 let get_project_tree form_prod project = 
-  lwt roots_id = Project.get_roots project in
+  lwt roots_id = QProject.get_roots project in
   let nodes = Hashtbl.create 20 in
   lwt trees = 
-    Tree.make_forest (fun (id,_,_) -> Project.get_sons id) roots_id in
+    Tree.make_forest (fun (id,_,_) -> QProject.get_sons id) roots_id in
   let format_node (id, typeid, note) =
     lwt name = Sdd.get_name typeid in
     let button = make_product_button form_prod (id,name,note) in
@@ -380,18 +268,13 @@ let get_init_planet () =
 
 }}		 
 
-
-let hashtbl_find tbl = function
-  | Some id -> Some (Hashtbl.find tbl id)
-  | None -> None 
-
 {shared{
 type aux = Html5_types.input Eliom_content_core.Html5.elt -> 
   Html5_types.button Eliom_content_core.Html5.elt option -> unit
 }}
 
 let make_planet_list_form form_planet nodes project =
-  lwt planets_lists = Planet.fetch_by_project project in
+  lwt planets_lists = QPlanet.fetch_by_project project in
   let init_planet = {aux{ get_init_planet () }} in
   let make_planet_button (planet_id,node_id) = 
     let node = hashtbl_find nodes node_id in
@@ -414,7 +297,7 @@ let make_planet_list_form form_planet nodes project =
   Lwt.return (List.map aux_users planets_lists)
 
 let specialize_planet_form project = 
-  lwt project_name = Project.get_name project in
+  lwt project_name = QProject.get_name project in
   let form_fun (form_planet,form_product) = 
     lwt nodes,trees = get_project_tree form_product project in
     lwt planet_list = make_planet_list_form form_planet nodes project in
@@ -432,7 +315,7 @@ let _ =
         match planet with
             None -> Lwt.return ()
           | Some planet -> 
-              lwt _ = Planet.update_product planet product in
+              lwt _ = QPlanet.update_product planet product in
               Lwt.return ()
       ))
 
@@ -446,35 +329,11 @@ let make_admin_project_link project_id project_name =
   a ~service:project_admin_service [pcdata project_name] project_id
 
 let make_admin_projects_list user = 
-  lwt projects = Project.fetch_by_admin user in
+  lwt projects = QProject.fetch_by_admin user in
   let aux (id,name) = 
     li [make_admin_project_link id name]
   in 
   Lwt.return (ul (List.map aux projects))
-
-(* Decorate a tree according to various information 
-   Used in the project_page *)
-
-let decorate_tree_node (id,typeid,notes) = 
-  lwt name = Sdd.get_name typeid in 
-  lwt users = Planet.fetch_by_node id in
-  let printer = function
-      1 -> "1 planet"
-    | n -> Printf.sprintf "%i planets" n in
-  let format_user (user,planets) = 
-    li ~a:[a_title (printer planets)] [pcdata user]
-  in
-  Lwt.return Html5.F.(
-      [ div
-          [span ~a:[a_title notes] [pcdata name] ;
-           ul (List.map format_user users)
-          ]])
-
-let decorate_trees project = 
-  lwt roots_id = Project.get_roots project in
-  lwt trees = 
-    Tree.make_forest (fun (id,_,_) -> Project.get_sons id) roots_id in
-  Tree.Lwt.printf decorate_tree_node trees
 
 (** Le menu *)
 
@@ -485,7 +344,7 @@ let menu user =
      project_member_service, [pcdata "Your Projects"] ;
     ]
   in
-  lwt projects = Project.fetch_by_user user in
+  lwt projects = QProject.fetch_by_user user in
   let projects = List.map (fun x -> li [make_link_member_project x]) projects in
   let projects = match projects with
 	| [] -> []
@@ -512,8 +371,6 @@ let menu user =
       ])
 
 
-(** Quelques utilitaires *)
-
 let make_page ?(css=[]) user title body =
   lwt menu = menu user in
   Lwt.return (
@@ -531,7 +388,7 @@ let () =
       Lwt.return (
         fun user ->
           lwt form = new_planet_form user.id in
-          lwt planets = Planet.fetch_by_user_group_loc user.id in
+          lwt planets = QPlanet.fetch_by_user_group_loc user.id in
           lwt planets = Lwt_list.map_s 
               (fun (id,x) ->
                 lwt (name,typ,system) = Sdd.get_info id in Lwt.return (name,x)) 
@@ -573,15 +430,15 @@ let () =
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_admin () = 
-            lwt project_name = Project.get_name project in
+            lwt project_name = QProject.get_name project in
             make_page 
               user.id
               ("Eve PI - Oups") 
               [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
                 center [h1 [pcdata "GO AWAY !"]] ] in
           let regular_page () = 
-            lwt project_name = Project.get_name project in
-            lwt roots_id = Project.get_roots project in
+            lwt project_name = QProject.get_name project in
+            lwt roots_id = QProject.get_roots project in
             lwt planets = specialize_planet_form project in
             make_page
               user.id
@@ -590,11 +447,11 @@ let () =
                             em [pcdata project_name] ]] ;
                 planets ;
               ] in
-          lwt exist = Project.exist project in
+          lwt exist = QProject.exist project in
           if not exist then 
             not_exist () 
           else
-            lwt is_admin = Admin.is_admin project user.id in
+            lwt is_admin = QAdmin.is_admin project user.id in
             if not is_admin then
               not_admin ()
             else
@@ -627,7 +484,7 @@ let () =
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_attached () = 
-            lwt project_name = Project.get_name project in
+            lwt project_name = QProject.get_name project in
             make_page
               user.id
               ("Eve PI - My Projects - "^ project_name)
@@ -638,9 +495,9 @@ let () =
                    ]
               ] in
           let regular_page () =
-            lwt project_name = Project.get_name project in
-            lwt is_admin = Admin.is_admin project user.id in
-            lwt trees = decorate_trees project in
+            lwt project_name = QProject.get_name project in
+            lwt is_admin = QAdmin.is_admin project user.id in
+            lwt trees = Qtree.decorate project in
             let admin_link = 
               if is_admin then
                 [ a ~service:project_admin_service 
@@ -655,11 +512,11 @@ let () =
                              pcdata " " ] @ admin_link)] ;
                 trees ;
               ] in
-          lwt exist = Project.exist project in
+          lwt exist = QProject.exist project in
           if not exist then 
             not_exist () 
           else
-            lwt is_attached = User.is_attached project user.id in 
+            lwt is_attached = QUser.is_attached project user.id in 
             if not is_attached then
               not_attached ()
             else

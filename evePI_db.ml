@@ -85,7 +85,7 @@ let get_currval seq =
 (** {1 Projects} *)
 (*****************)
 
-module Project = struct 
+module QProject = struct 
 let exist project = 
   (query
 	  <:select< row | 
@@ -164,7 +164,7 @@ let fill_tree project tree =
   in
   let rec traverse_tree parent tree = match tree with
 	  Tree.Leaf typeid -> 
-		lwt _ = new_node parent typeid in Lwt.return ()
+		Lwt.return () (* We don't want P0 inside the project_tree *)
 	| Tree.Node (typeid,tl) -> 
 		lwt parent = new_node parent typeid in
 		Lwt_list.iter_s (traverse_tree (Some parent)) tl
@@ -204,7 +204,7 @@ end
 (** {1 Planets} *)
 (****************)
 
-module Planet = struct 
+module QPlanet = struct 
 
 let create ?prod ?note ?project user location =
   let project = opt_map (fun p -> <:value< $int64:p$ >>) project in
@@ -316,7 +316,7 @@ end
 (** {1 Users} *)
 (**************)
 
-module User = struct
+module QUser = struct
 
 let exist name =
   (view
@@ -377,7 +377,7 @@ end
 (** {1 Admin} *)
 (**************)
 
-module Admin = struct 
+module QAdmin = struct 
 let promote project user =
   query
 	<:insert< $projects_admins$ :=
