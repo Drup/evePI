@@ -86,7 +86,8 @@ let format_planet_list list =
 
 let format_grouped_planet_list format_group list = 
   let aux_group (group, l) = 
-    (dt [format_group group],[]),(dd (format_planet_list l),[])
+	let planets = match l with [] -> [span []] | _ -> format_planet_list l in
+    (dt [format_group group],[]),(dd planets,[])
   in
   divc "planet-list" [dl ~a:(classe "dl-horizontal") (List.map aux_group list)]
 
