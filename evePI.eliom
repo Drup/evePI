@@ -80,10 +80,8 @@ let opt_int64 =
   let of_string = function "" -> None | s -> Some (Int64.of_string s) in
   Eliom_parameter.user_type ~to_string ~of_string
 
-let planets_in_system_service =
-  Eliom_registration.Ocaml.register_post_coservice'
-    ~post_params:Eliom_parameter.(string "system")
-    (fun () system_id -> Sdd.get_planets_by_system system_id)
+let rpc_get_planets_by_system =
+  server_function Json.t<string> Sdd.get_planets_by_system
 
 let new_planet_service =
   Eliom_service.post_coservice'
@@ -98,8 +96,7 @@ let select_system_handler slist location planet_div select_system =
   let updater s =
     let current_system = Js.to_string s in
     lwt list = 
-      Eliom_client.call_caml_service 
-        ~service:%planets_in_system_service () current_system in
+      %rpc_get_planets_by_system current_system in
     let list = List.map 
         (fun (id,name,typ) -> Option ([],id,Some (pcdata name),true)) list in
     let head,tail = match list with
