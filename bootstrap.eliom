@@ -201,7 +201,7 @@ module Typeahead = struct
     in 
     try 
       let obj = make_object (U.obj [| |]) user_data in
-      let data = U.fun_call (U.variable "$") [|U.inject i|] in
+      let data = U.fun_call (U.variable "jQuery") [|U.inject i|] in
       ignore (U.meth_call data "typeahead" [| U.inject obj|] )
     with exn -> debug_exn "" exn ; raise exn 
 

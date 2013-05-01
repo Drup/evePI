@@ -23,7 +23,7 @@ PERSISTENT_DATA_BACKEND = sqlite
 
 # Debug application (yes/no): Debugging info in compilation,
 # JavaScript, ocsigenserver
-DEBUG := yes
+DEBUG := no
 
 # User to run server with (make run.*)
 WWWUSER := www-data
