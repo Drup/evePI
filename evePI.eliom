@@ -12,6 +12,7 @@ open Skeleton
 open Skeleton.Connected
 open EvePI_db
 open Widget
+open Utility
 
 
 
@@ -396,7 +397,7 @@ let () =
           make_page 
             user.id
             "Eve PI"
-            [ center [h1 ~a:(classe "text-center") [pcdata "Welcome to EvePI"] ];
+            [ center [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
               format_grouped_planet_list pcdata planets ;
               form ;
             ]
