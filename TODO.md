@@ -5,10 +5,20 @@ Boring bits :
 * Make a manual, maybe.
 
 Easy bits :
-* Implement multiple sorting and grouping methods for planets.
-* Add tooltips on planets.
-* Make a button to add a new goal in a project.
+* Add messages (like confirmation or fail) on the login/acount creation form.
 * Hide some forms with collapsible sections.
+* Add a planet counter for projects
+* Home : 
+  * Implement multiple sorting and grouping methods for planets.
+  * Add tooltips on planets.
+* Project list : 
+  * Be able to select multiples goals when creating a project.
+* Project :
+  * A button to add a new planet to the project.
+* Admin :
+  * Make a button to add a new goal in a project.
+  * Make a button to rename a project.
+  * Make a form to add other admins.
 
 Not so easy bits : 
 * Change the way to pull systems in the Home to a dynamic one. 
