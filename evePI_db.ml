@@ -238,13 +238,17 @@ let update_notes planet_id notes =
 	  p.id = $int64:planet_id$ 
 	  >>
 
+
 let fetch_by_user user =
-  (view
-	  << { p = planet.id } |
+  view
+	  << { id = planet.id ;
+		   proj = planet.project_id ;
+		   loc = planet.location ;
+		   notes = planet.notes ;
+	      } |
 		planet in $planets$ ;
-		planet.user_id = $int64:user$
-		>>)
-  >|= List.map (fun x -> x#!p)
+		planet.user_id = $int64:user$ ;
+		>>
 
 let fetch_by_user_group_loc user =
   (view
@@ -394,3 +398,22 @@ let is_admin project user =
 			  >>)
   >|= (function [] -> false | _ -> true)
 end
+
+(** {1 Helpers} *)
+
+(** Trick module to be able to cast macaque object whithout the syntax extension, usefull in .eliom files ... *)
+module Helpers = struct
+
+let id p = p#!id 
+
+let proj p = p#!proj
+let proj_opt p = p#?proj
+
+let loc p = p#!loc
+
+let prod p = p#!prod
+
+end
+
+
+

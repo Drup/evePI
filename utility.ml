@@ -3,12 +3,16 @@
 (** Opt related *)
 
 let opt_map f = function
-	 None -> None 
+  | None -> None 
   | Some s -> Some (f s)
 
 let opt_string = function 
-	 Some s -> s
+  | Some s -> s
   | None -> ""
+
+let opt_unnamed = function
+  | Some s -> s
+  | None -> "Unnamed"
 
 (** List related *)
 
@@ -20,6 +24,9 @@ let list_grouping l =
 	 | (x,y)::t when x = a -> (a,b::y)::t
 	 | _ -> (a,[b])::l
   in List.fold_left aux [] l
+
+let list_grouping_sort l = 
+  list_grouping (List.sort (fun x y -> compare (fst x) (fst y)) l)
 
 (** Hshtbl *)
 

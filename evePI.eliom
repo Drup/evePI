@@ -15,14 +15,14 @@ open Widget
 open Utility
 
 
-
-
-
 (** Service to create a project *)
 let create_project_service =
   Eliom_service.post_coservice
     ~fallback:project_list_service
-    ~post_params:Eliom_parameter.(string "name" ** (string "description" ** int32 "goal")) ()
+    ~post_params:Eliom_parameter.(
+		string "name" ** 
+		  string "description" ** 
+		  int32 "goal") ()
 
 let _ = 
   action_with_redir_register 
@@ -57,11 +57,6 @@ let new_project_form () =
               int32_select ~name:goal ghd gtl ;
               button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
             ]]]) ())
-
-
-
-
-
 
 (* Nouvelle planete *)
 
@@ -261,7 +256,7 @@ let get_init_planet () =
   let aux button = function
     |	Some node -> handle_hover button node ; handle_select button node
     | None -> handle_clean button
-  in
+  in 
   aux
 
 }}		 
@@ -338,8 +333,7 @@ let make_admin_projects_list user =
 let menu user =
   let elements =
     [main_service, [pcdata "Home"] ;
-     project_list_service, [pcdata "Projects"] ;
-     project_member_service, [pcdata "Your Projects"] ;
+     project_list_service, [pcdata "Projects List"] ;
     ]
   in
   lwt projects = QProject.fetch_by_user user in
@@ -353,7 +347,7 @@ let menu user =
 		   a_user_data "toggle" "dropdown" ;
 		   a_href (uri_of_string (fun () -> "#")) ;
          ]
-		   [pcdata "Projects"; b ~a:(classe "carret") []] ::
+		   [pcdata "My Projects"; b ~a:(classe "carret") []] ::
 		   [ul ~a:[lclasse "dropdown-menu"] projects])
 	]
   in 
@@ -386,16 +380,12 @@ let () =
       Lwt.return (
         fun user ->
           lwt form = new_planet_form user.id in
-          lwt planets = QPlanet.fetch_by_user_group_loc user.id in
-          lwt planets = Lwt_list.map_s 
-              (fun (id,x) ->
-                lwt (name,typ,system) = Sdd.get_info id in Lwt.return (name,x)) 
-              planets in
+          lwt planets = make_planet_list_by_loc user.id in
           make_page 
             user.id
             "Eve PI"
             [ center [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
-              format_grouped_planet_list pcdata planets ;
+              planets ;
               form ;
             ]
       )) ;
@@ -454,20 +444,6 @@ let () =
               not_admin ()
             else
               regular_page ()
-      )) ;
-
-  Connected.register
-    ~service:project_member_service
-    (fun () () -> 
-      Lwt.return (
-        fun user ->
-          lwt project_list = make_planet_list_by_project user.id in
-          make_page
-            user.id
-            "Eve PI - My Projects"
-            [ center [h2 [pcdata "Your Projects"]] ;
-              format_grouped_planet_list make_link_member_project project_list
-            ]
       )) ;
 
   Connected.register

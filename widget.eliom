@@ -11,7 +11,7 @@ open Skeleton
 open Skeleton.Connected
 open Auth
 open EvePI_db
-
+open Utility
 
 let make_link_member_project (project_id,project_name) = 
   a ~service:project_member_coservice [pcdata project_name] project_id
@@ -70,31 +70,63 @@ let make_projects_list user =
 
 (** Planet related widget *)
 
+let format_planet_list format_info list =
+  let aux_planet (info,typ) =
+    i
+      ~a:[a_title (format_info info); lclasses [typ;"planet"]]
+      [] in
+  List.map aux_planet list
+
+let format_grouped_planet_list format_group format_info list =
+  let aux_group (group, l) =
+	let planets =
+	  match l with
+		| [] -> [span []]
+		| _ -> format_planet_list format_info l
+	in
+    (dt (format_group group),[]),(dd planets,[])
+  in
+  divc "planet-list" [dl ~a:(classe "dl-horizontal") (List.map aux_group list)]
+
+let user_planet_list_grouped ~arrange ~format_group ~format_info user_id = 
+  lwt planet_list = QPlanet.fetch_by_user user_id in
+  lwt planet_list = Lwt_list.map_s arrange planet_list in
+  let planet_list = list_grouping_sort planet_list in
+  Lwt.return (
+  	format_grouped_planet_list
+  	  format_group
+  	  format_info
+  	  planet_list)
+
+let make_planet_list_by_loc user_id = 
+  let arrange p =
+    lwt (name,typ,system) = Sdd.get_info (Helpers.loc p) in
+  	Lwt.return (system,(name,typ))
+  in
+  let format_group x = [pcdata x] in
+  let format_info = id in
+  user_planet_list_grouped ~arrange ~format_group ~format_info user_id
+
+let make_planet_list_by_project user_id =
+  let arrange p =
+	lwt (name,typ,system) = Sdd.get_info (Helpers.loc p) in
+	lwt project = match (Helpers.proj_opt p) with
+		None -> Lwt.return None
+	  | Some x -> 
+		  lwt name = QProject.get_name x in 
+		  Lwt.return (Some (x,name))
+	in Lwt.return (project, (name,typ))
+  in
+  let format_group = function
+	| None -> [pcdata "Unnafiliated"]
+	| Some p -> [make_link_member_project p] 
+  in 
+  let format_info = id in
+  user_planet_list_grouped ~arrange ~format_group ~format_info user_id
+
 let make_free_planet_list project_id =
   lwt users_list = QPlanet.fetch_free_by_user project_id in
   let aux (_id,user_name,count) = 
     li [pcdata (Printf.sprintf "%s : %Li free planets" user_name count)]
   in 
   Lwt.return (ul (List.map aux users_list))
-
-let format_planet_list list = 
-  let aux_planet (id,info,prod) =
-    i
-      ~a:[lclasses ["planet"]]
-      [] in
-  List.map aux_planet list
-
-let format_grouped_planet_list format_group list = 
-  let aux_group (group, l) = 
-	let planets = match l with [] -> [span []] | _ -> format_planet_list l in
-    (dt [format_group group],[]),(dd planets,[])
-  in
-  divc "planet-list" [dl ~a:(classe "dl-horizontal") (List.map aux_group list)]
-
-let make_planet_list_by_project user = 
-  lwt projects = QProject.fetch_by_user user in
-  let aux (id,name) = 
-    lwt planets = QPlanet.fetch_by_project_user id user in
-    Lwt.return ((id,name), planets)
-  in 
-  Lwt_list.map_s aux projects

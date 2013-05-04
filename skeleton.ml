@@ -37,12 +37,6 @@ let default_content () =
 module Connected = Connected (struct let v = default_content end) (App)
 open Connected
 
-(** My projects *)
-let project_member_service =
-  Eliom_service.service
-    ~path:["myprojects";""] 
-    ~get_params:Eliom_parameter.unit ()
-
 (** Projects list *)
 let project_list_service =
   Eliom_service.service

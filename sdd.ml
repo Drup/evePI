@@ -2,6 +2,8 @@ open Eliom_lib
 open Eliom_content
 open Eve_db.SDD
 
+open Utility
+
 let products = 
   <:table< planetSchematics (
 	schematicID smallint NOT NULL,
@@ -82,10 +84,6 @@ let mapSolarSystems =
   securityClass text
 )>>
 
-let opt_string = function
-	 Some s -> s
-  | None -> "Unnamed"
-
 let get_name pID = 
   let name = 
 	 <:view< {name = object.typeName } | 
@@ -113,7 +111,7 @@ let get_sons pID =
 	  object.typeID = product.typeID ;
 	  >> in
   (view ~log:stderr sons)
-  >|= List.map (fun x -> (x#!id, opt_string x#?name))
+  >|= List.map (fun x -> (x#!id, opt_unnamed x#?name))
   
 let categorygoals = 43l
 
@@ -130,7 +128,7 @@ let get_possible_goals () =
 	  pi.groupID = nullable g.id ;
 	  >> in
   (view ~log:stderr goals)
-  >|= List.map (fun x -> (x#!id, opt_string x#?name))
+  >|= List.map (fun x -> (x#!id, opt_unnamed x#?name))
 
 let planets_id =
   [ (30889l, "Shattered");
@@ -154,7 +152,7 @@ let id_to_planet id = List.assoc id planets_id
 let get_systems () =
   (query 
 	  <:select< system | system in $mapSolarSystems$ ; >> )
-  >|= List.map (fun s -> s#!solarSystemID, opt_string s#?solarSystemName)
+  >|= List.map (fun s -> s#!solarSystemID, opt_unnamed s#?solarSystemName)
 
 let planet_groupID = 7l
 
@@ -168,8 +166,9 @@ let get_planets_by_system system_name =
 		nullable system.solarSystemID = planet.solarSystemID ;
 		planet.groupID = $int32:planet_groupID$ ;
 		>>)
-  >|= List.map (fun s -> s#!id, opt_string s#?name, opt_planet_type s#?typ)
+  >|= List.map (fun s -> s#!id, opt_unnamed s#?name, opt_planet_type s#?typ)
 
+(** Get planet info : (name,type,system) *)
 let get_info planet_id = 
   (view_one
 	  << { name = planet.itemName ; 
@@ -180,4 +179,8 @@ let get_info planet_id =
 		nullable system.solarSystemID = planet.solarSystemID ;
 		planet.itemID = $int32:planet_id$ ;
 		>>)
-	 >|= (fun s -> opt_string s#?name, id_to_planet (opt_planet_type s#?typ), opt_string s#?system)
+	 >|= 
+  (fun s -> 
+	 opt_unnamed s#?name, 
+	 id_to_planet (opt_planet_type s#?typ), 
+	 opt_unnamed s#?system)
