@@ -7,7 +7,7 @@ html, body {
 body {
 	 background-image : url("../img/bgplanet.jpg") ;
 	 background-size : cover ;
-	 background-color : transparent ;
+	 background-color : black ;
 	 background-attachment: fixed ;
 	 background-position: center top ;
 }
