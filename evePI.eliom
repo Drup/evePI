@@ -446,7 +446,7 @@ let () =
           if not exist then 
             not_exist () 
           else
-            lwt is_admin = QAdmin.is_admin project user.id in
+            lwt is_admin = QAdmin.verify project user.id in
             if not is_admin then
               not_admin ()
             else
@@ -477,7 +477,7 @@ let () =
               ] in
           let regular_page () =
             lwt project_name = QProject.get_name project in
-            lwt is_admin = QAdmin.is_admin project user.id in
+            lwt is_admin = QAdmin.verify project user.id in
             lwt trees = Qtree.decorate project in
             let admin_link = 
               if is_admin then

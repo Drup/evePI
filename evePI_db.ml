@@ -389,7 +389,7 @@ let promote project user =
 			 user_id = $int64:user$ ;
 			 } >>
 
-let is_admin project user = 
+let verify project user = 
   (query
 	 <:select< row |
 			  row in $projects_admins$ ;
