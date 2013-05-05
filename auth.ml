@@ -136,7 +136,8 @@ struct
 		(fun () -> Eliom_reference.get user)
 		(fun _ _ -> App.send (Default.v ()))
 		(fun u g p -> 
-		   Eliom_registration.Redirection.send ((action u g p) ; redir))
+		   lwt _ = action u g p in 
+		   Eliom_registration.Redirection.send redir)
 	in
 	Eliom_registration.Any.register f
 
