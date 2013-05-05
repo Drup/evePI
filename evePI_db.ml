@@ -107,12 +107,15 @@ let update_descr project_id description =
 	  >>
 
 let fetch_all () =
-  (query <:select< row | row in $projects$ >>)
+  (query <:select< project 
+	         order by project.id asc | 
+		   project in $projects$ >>)
   >|= List.map (fun r -> r#!id, r#!name, r#!description)
 	  
 let fetch_by_user id =
   (view
-   << {id = project.id ; name = project.name } |
+   << {id = project.id ; name = project.name } 
+	   order by project.id asc |
     activity in $projects_users$ ;
     project in $projects$ ;
     project.id = activity.project_id ;
@@ -121,7 +124,8 @@ let fetch_by_user id =
 					
 let fetch_by_admin id =
   (view
-   << {id = project.id ; name = project.name } |
+   << {id = project.id ; name = project.name } 
+	   order by project.id asc |
     activity in $projects_admins$ ;
     project in $projects$ ;
     project.id = activity.project_id ;
