@@ -12,6 +12,11 @@ body {
 	 background-position: center top ;
 }
 
+h3 [class^="icon-"] {
+	margin-top: 8px ;
+	margin-left: 1px ;
+}
+
 .main {
 	 background-color : rgba(0,0,0,0.8);
 	 padding: 0 10px ;

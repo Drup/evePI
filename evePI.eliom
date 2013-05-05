@@ -46,17 +46,23 @@ let new_project_form () =
     f (List.hd goals), List.map f (List.tl goals)
   in					
   Lwt.return (post_form ~a:(classe "form-inline")
-      ~service:create_project_service
-      (fun (name,(desc,goal)) -> 
-        [ fieldset ~legend:(legend [pcdata "Create a new project"]) [
-            spancs ["input-prepend";"input-append"] [
-              string_input ~a:[a_placeholder "Name"] 
-                ~input_type:`Text ~name:name () ;
-              string_input ~a:[a_placeholder "Description"] 
-                ~input_type:`Text ~name:desc () ;
-              int32_select ~name:goal ghd gtl ;
-              button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
-            ]]]) ())
+	  ~service:create_project_service
+	  (fun (name,(desc,goal)) -> 
+		 [ h3
+			 ~a:(Collapse.a "create_project_form")
+			 [pcdata "Create a new project"; icon ~white:true "chevron-down"] ;
+		   Collapse.div "create_project_form" 
+			 [divcs 
+				["input-prepend";"input-append"] 
+				[ string_input ~a:[a_placeholder "Name"] 
+					~input_type:`Text ~name:name () ;
+				  string_input ~a:[a_placeholder "Description"] 
+					~input_type:`Text ~name:desc () ;
+				  int32_select ~name:goal ghd gtl ;
+				  button 
+					~a:(classes ["btn"]) 
+					~button_type:`Submit [pcdata "Create"] ;
+				]]]) ())
 
 (* Nouvelle planete *)
 
@@ -121,18 +127,20 @@ let new_planet_form user =
                     lclasse ".typeahead"] () in
     let planet_place = span [] in
     let _ = {unit{ 
-               select_system_handler 
-               %slist %location 
-               %planet_place %select_system }} in
-    [ fieldset ~legend:(legend [pcdata "Create a new planet"]) [
-        spancs ["input-prepend";"input-append"] [
-          user_type_select 
-            (function None -> "" | Some x -> Int64.to_string x)
-            ~name:proj phead plist ;
-          select_system ;
-          planet_place ;
-          button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
-        ]]]
+        select_system_handler 
+        %slist %location 
+        %planet_place %select_system }} in
+    [ h3 ~a:(Collapse.a "create_planet_form")
+		[pcdata "Create a new planet"; icon ~white:true "chevron-down"] ;
+	  Collapse.div "create_planet_form"
+		[divcs ["input-prepend";"input-append"] 
+		   [ user_type_select 
+               (function None -> "" | Some x -> Int64.to_string x)
+               ~name:proj phead plist ;
+			 select_system ;
+			 planet_place ;
+			 button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
+           ]]]
   in
   Lwt.return (
     post_form ~a:(classe "form-inline")
@@ -347,7 +355,7 @@ let menu user =
 		   a_user_data "toggle" "dropdown" ;
 		   a_href (uri_of_string (fun () -> "#")) ;
          ]
-		   [pcdata "My Projects"; b ~a:(classe "carret") []] ::
+		   [pcdata "My Projects"; caret] ::
 		   [ul ~a:[lclasse "dropdown-menu"] projects])
 	]
   in 
@@ -401,8 +409,8 @@ let () =
             user.id
             "Eve PI - Projects"
             [ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
-              dl ~a:(classes []) projects_list ;
               project_form ;
+              dl ~a:(classes []) projects_list ;
             ]
       )) ;
 

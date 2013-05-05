@@ -1,7 +1,7 @@
 {shared{
 open Eliom_lib
 open Eliom_content
-open Eliom_content.Html5.D
+open Eliom_content.Html5.F
 }}
 (** Faire une page en bonne et due forme *)
 
@@ -17,6 +17,8 @@ let make_page ?(a=[]) ?(css=[]) ?(js=[]) s bodyl =
     ~js:(["js";"jquery.js"] :: ["js";"bootstrap.min.js"] :: js)
     (body bodyl)
 
+
+{shared{
 (** Quelques utilitaires generiques *)
 
 let lclasse s = a_class [s]
@@ -42,6 +44,15 @@ let center l =
 
 
 (** Des éléments bootstrap *)
+
+(** Icons *)
+let icon ?(white=false) s = 
+  let style = if white then ["icon-white"] else [] in 
+  i ~a:(classes (("icon-"^s) :: style)) []
+
+(** Caret *)
+let caret = 
+  spanc "caret" []
 
 (** Les labels *)
 module Label = struct
@@ -100,6 +111,8 @@ let grid_fluid ?(head=[]) = grid ~postfix:"-fluid" ~size:12 ~head
 
 let container_fluid ?(head=[]) = container ~postfix:"-fluid" ~head
 
+}}
+
 (** Les menus *)
 
 (* Permet de savoir si un service correspond a l'url courante *)
@@ -137,9 +150,33 @@ let navbar ?(classes=[]) ?head ?(head_classes=[]) menu =
       divc "container" body
     ]]
 
+{shared{
 
+(** {2 Collasping} *)
+module Collapse = struct
 
-(** Typeahead
+(** Data attribute to make an element toogle colapse another element. Take the id of the element to collapse whithout "#" *)
+let a_collapse id = 
+  [a_user_data "toggle" "collapse" ; a_user_data "target" ("#"^id)]
+
+(** Button that toogle-collapse the element with the given id *)
+let button ?(a=[]) id content = 
+  button 
+    ~a:(lclasses ["btn"] :: a_collapse id @ a)
+    ~button_type:`Button content
+
+(** Div to encapsulate the element to collapse *)
+let div ?(a=[]) id content = 
+  div 
+	~a:(a_id id :: lclasse "collapse" :: a)
+	content 
+
+let a = a_collapse
+end
+
+}}
+
+(** {2 Typeahead}
     http://twitter.github.io/bootstrap/javascript.html#typeahead 
 *)
 
@@ -158,6 +195,7 @@ let opt_map f = function Some x -> Some (f x) | None -> None
 module Typeahead = struct
 
   open Js
+  open Html5.D
   module U = Js.Unsafe 
 
   let apply

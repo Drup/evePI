@@ -6,7 +6,6 @@ Boring bits :
 
 Easy bits :
 * Add messages (like confirmation or fail) on the login/acount creation form.
-* Hide some forms with collapsible sections.
 * Add a planet counter for projects
 * Home : 
   * Implement multiple sorting and grouping methods for planets.
