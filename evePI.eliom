@@ -123,30 +123,28 @@ let new_planet_form user =
     let select_system = 
       Raw.input ~a:[a_input_type `Text; 
                     a_autocomplete `Off;
-                    a_placeholder "Location"; 
-                    lclasse ".typeahead"] () in
+                    a_placeholder "Location"] () in
     let planet_place = span [] in
     let _ = {unit{ 
         select_system_handler 
         %slist %location 
         %planet_place %select_system }} in
-    [ h3 
-		[span ~a:(Collapse.a "create_planet_form")
-		   [pcdata "Create a new planet"; icon ~white:true "chevron-down"]] ;
-	  Collapse.div "create_planet_form"
-		[divcs ["input-prepend";"input-append"] 
-		   [ user_type_select 
-			   (function None -> "" | Some x -> Int64.to_string x)
-			   ~name:proj phead plist ;
-			 select_system ;
-			 planet_place ;
-			 button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
-		   ]]]
+    [ 
+	  divcs ["input-prepend";"input-append"] 
+		[ user_type_select 
+			(function None -> "" | Some x -> Int64.to_string x)
+			~name:proj phead plist ;
+		  select_system ;
+		  planet_place ;
+		  button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
+		]]
   in
   Lwt.return (
-    post_form ~a:(classe "form-inline")
-      ~service:new_planet_service
-      form_fun ())
+	div 
+	  [ h3 [pcdata "Create a new planet"; icon ~white:true "chevron-down"] ;
+		post_form ~a:(classe "form-inline")
+		  ~service:new_planet_service
+		  form_fun ()])
 
 let _ =
   action_register
