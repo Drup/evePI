@@ -13,13 +13,14 @@ open Auth
 open EvePI_db
 open Utility
 
+
+(** {1 Project} *)
+
 let make_link_member_project (project_id,project_name) = 
   a ~service:project_member_coservice [pcdata project_name] project_id
 
 let make_link_project_page project_id project_name = 
   a ~a:(classe "btn") ~service:project_member_coservice [pcdata project_name] project_id
-
-
 
 (** Join a project *)
 
@@ -67,8 +68,91 @@ let make_projects_list user =
   Lwt.return (List.map aux projects)
 
 
+(** {2 Project adminstration widgets *)
 
-(** Planet related widget *)
+(** Add a new goal to a project *)
+
+let add_goal_service = 
+  Eliom_service.post_coservice'
+	~post_params:Eliom_parameter.(int64 "project" ** int32 "goal") ()
+
+
+let add_goal_form project_id = 
+  lwt goals = Sdd.get_possible_goals () in
+  let (ghd,gtl) = 
+    let f (id,name) = 
+      Option ([],id,Some (pcdata name),true) in
+    f (List.hd goals), List.map f (List.tl goals)
+  in
+  let form_fun (project_form,goal_form) = 
+	[ divc "input-append"
+		[ int32_select ~name:goal_form ghd gtl ;
+		  int64_button 
+			~a:(classes ["btn"])
+			~name:project_form
+			~value:project_id
+			[pcdata "Add"] 
+		]]
+  in 
+  Lwt.return (
+	post_form 
+	  ~a:(classe "form-inline")
+	  ~service:add_goal_service
+	  form_fun ()
+  )
+
+let _ = 
+  action_with_redir_register 
+    ~service:add_goal_service
+    (fun admin () (project_id,goal) -> 
+	   lwt is_admin = QAdmin.verify project_id admin.id in
+	   if is_admin then
+         lwt tree = 
+		   Tree.make (fun id -> (Sdd.get_sons id) >|= List.map fst) goal in 
+         lwt _ = QProject.fill_tree project_id tree in
+         Lwt.return ()
+	   else 
+		 Lwt.return ()
+    )
+
+(** Change the name of a project *)
+
+let change_name_service = 
+  Eliom_service.post_coservice'
+	~post_params:Eliom_parameter.(int64 "project" ** string "name") ()
+
+let change_name_form project_id = 
+  let form_fun (project_form,name_form) = 
+	[ divc "input-append"
+		[ string_input ~a:[a_placeholder "New name"] 
+			~input_type:`Text ~name:name_form () ;
+		  int64_button 
+			~a:(classes ["btn"])
+			~name:project_form
+			~value:project_id
+			[pcdata "Change name"] 
+		]]
+  in 
+  Lwt.return (
+	post_form 
+	  ~a:(classe "form-inline")
+	  ~service:change_name_service
+	  form_fun ()
+  )
+
+let _ = 
+  action_with_redir_register 
+    ~service:change_name_service
+    (fun admin () (project_id,name) -> 
+	   lwt is_admin = QAdmin.verify project_id admin.id in
+	   if is_admin then
+         lwt _ = QProject.update_name project_id name in
+         Lwt.return ()
+	   else 
+		 Lwt.return ()
+    )
+
+(** {1 Planet widgets} *)
 
 let format_planet_list format_info list =
   let aux_planet (info,typ) =

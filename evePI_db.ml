@@ -94,6 +94,18 @@ let exist project =
 		>>)
   >|= (function [] -> false | _ -> true)
   
+let update_name project_id name =
+  query
+	 <:update< p in $projects$ := { name = $string:name$ } |
+	  p.id = $int64:project_id$ 
+	  >>
+
+let update_descr project_id description =
+  query
+	 <:update< p in $projects$ := { description = $string:description$ } |
+	  p.id = $int64:project_id$ 
+	  >>
+
 let fetch_all () =
   (query <:select< row | row in $projects$ >>)
   >|= List.map (fun r -> r#!id, r#!name, r#!description)

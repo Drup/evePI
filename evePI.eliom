@@ -435,11 +435,15 @@ let () =
             lwt project_name = QProject.get_name project in
             lwt roots_id = QProject.get_roots project in
             lwt planets = specialize_planet_form project in
+			lwt add_goal = add_goal_form project in 
+			lwt change_name = change_name_form project in
             make_page
               user.id
               ("Eve PI - Admin - "^ project_name)
               [ center [h2 [pcdata "Admin panel for the project : " ; 
                             make_link_member_project (project,project_name) ]] ;
+				add_goal ;
+				change_name ;
                 planets ;
               ] in
           lwt exist = QProject.exist project in
