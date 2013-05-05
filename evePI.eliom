@@ -49,8 +49,8 @@ let new_project_form () =
 	  ~service:create_project_service
 	  (fun (name,(desc,goal)) -> 
 		 [ h3
-			 ~a:(Collapse.a "create_project_form")
-			 [pcdata "Create a new project"; icon ~white:true "chevron-down"] ;
+			 [span ~a:(Collapse.a "create_project_form")
+				[pcdata "Create a new project"; icon ~white:true "chevron-down"]] ;
 		   Collapse.div "create_project_form" 
 			 [divcs 
 				["input-prepend";"input-append"] 
@@ -130,17 +130,18 @@ let new_planet_form user =
         select_system_handler 
         %slist %location 
         %planet_place %select_system }} in
-    [ h3 ~a:(Collapse.a "create_planet_form")
-		[pcdata "Create a new planet"; icon ~white:true "chevron-down"] ;
+    [ h3 
+		[span ~a:(Collapse.a "create_planet_form")
+		   [pcdata "Create a new planet"; icon ~white:true "chevron-down"]] ;
 	  Collapse.div "create_planet_form"
 		[divcs ["input-prepend";"input-append"] 
 		   [ user_type_select 
-               (function None -> "" | Some x -> Int64.to_string x)
-               ~name:proj phead plist ;
+			   (function None -> "" | Some x -> Int64.to_string x)
+			   ~name:proj phead plist ;
 			 select_system ;
 			 planet_place ;
 			 button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
-           ]]]
+		   ]]]
   in
   Lwt.return (
     post_form ~a:(classe "form-inline")
@@ -440,7 +441,7 @@ let () =
               user.id
               ("Eve PI - Admin - "^ project_name)
               [ center [h2 [pcdata "Admin panel for the project : " ; 
-                            em [pcdata project_name] ]] ;
+                            make_link_member_project (project,project_name) ]] ;
                 planets ;
               ] in
           lwt exist = QProject.exist project in
