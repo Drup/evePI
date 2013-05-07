@@ -176,6 +176,55 @@ end
 
 }}
 
+(** {2 ToogleClass} 
+	Little utility class to toogle a class on a target when fireing events on an element.
+*)
+{shared{
+module type CLASS = sig
+  val v : string
+  val revert : bool
+end
+}}
+
+{client{
+module ToogleClass (Class : CLASS) = struct
+
+  let up node =
+    node##classList##add(Js.string Class.v)
+  let down node = 
+    node##classList##remove(Js.string Class.v)
+  let toogle node = 
+    node##classList##toogle(Js.string Class.v)
+
+  let make_onoff event_on event_off element target =
+    let on = if Class.revert then down else up in 
+	let off = if Class.revert then up else down in 
+	Lwt.async (fun () -> 
+      event_on
+        element
+        (fun _ _ ->
+           on target ;
+           event_off element >|= (fun _ -> off target)))
+
+  let make_toogle event_toogle element target =
+	Lwt.async (fun () -> 
+	  event_toogle
+		element
+		(fun _ _ -> toogle target))
+
+  let onhover element target =
+	make_onoff
+	  Lwt_js_events.mouseovers Lwt_js_events.mouseout 
+	  element target 
+
+  let onclic element target = 
+	make_toogle
+	  Lwt_js_events.clicks
+	  element target 
+end
+}}
+
+
 (** {2 Typeahead}
     http://twitter.github.io/bootstrap/javascript.html#typeahead 
 *)
