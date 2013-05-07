@@ -5,8 +5,9 @@ Boring bits :
 * Make a manual, maybe.
 
 Easy bits :
-* Add messages (like confirmation or fail) on the login/acount creation form.
+* Add messages (like confirmation or fail) on the login/account creation form.
 * Add a planet counter for projects
+* Add a notion of toon for planets and add the relevant sorting for the home page.
 * Home : 
   * Implement multiple sorting and grouping methods for planets.
   * Add tooltips on planets.
@@ -24,3 +25,4 @@ Not so easy bits :
   Need either to add the like operator to macaque or to implement a prefix tree. (First solution is better)
 * Add a clean way to put notes on tree nodes and planets. Maybe with bootstrap's popover.
 * Add a system to monitor PI cycles.
+* Use Drag&Drop to assign planet in the project admin interface.
