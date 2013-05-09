@@ -215,6 +215,13 @@ let get_sons pID =
 
 end
 	 
+let get_typeid product_id =
+  (view_one
+				<< {typeid = product.typeid } |
+				 product in $products$ ;
+				 product.id = $int64:product_id$ 
+				 >>)
+  >|= (fun r -> r#!typeid)
 
 
 (** {1 Planets} *)
@@ -259,8 +266,9 @@ let fetch_by_user user =
   view
 	  << { id = planet.id ;
 		   proj = planet.project_id ;
+		   prod = planet.product_id ;
 		   loc = planet.location ;
-		   notes = planet.notes ;
+		   note = planet.notes ;
 	      } |
 		planet in $planets$ ;
 		planet.user_id = $int64:user$ ;
@@ -428,6 +436,10 @@ let proj_opt p = p#?proj
 let loc p = p#!loc
 
 let prod p = p#!prod
+let prod_opt p = p#?prod
+
+let note p = p#!note
+let note_opt p = p#?note
 
 end
 

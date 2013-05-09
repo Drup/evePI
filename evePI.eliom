@@ -205,72 +205,45 @@ let get_project_tree form_prod project =
 
 {client{
 
-let class_node_hover = "tree-hover"
+module LightActions = struct
+  let class_node_hover = "tree-hover"
 
-let class_node_select = "tree-select"
+  let class_node_select = "tree-select"
 
-let make_lights () = 
-  let current = ref None in
+  type t = Dom_html.element Js.t
+
   let up node_class node = 
-    let node = To_dom.of_button node in
-    node##classList##add(Js.string node_class) in
+    node##classList##add(Js.string node_class)
+
   let down node_class node = 
-    let node = To_dom.of_button node in
-    node##classList##remove(Js.string node_class) in
-  let select b =
-    (match !current with 
-        Some cur_b -> down class_node_select cur_b 
-      | None -> ()) ; 
-    current := Some b ;
-    up class_node_select b in
-  let clean () = match !current with 
-      Some cur_b -> down class_node_select cur_b 
-    | None -> ()
-  in
-  let hover_up = up class_node_hover in
-  let hover_down = down class_node_hover in
-  hover_up, hover_down, select, clean
+	node##classList##remove(Js.string node_class)
 
-let get_init_planet () = 
-  let light_up, light_down, select_node, clean_node = make_lights () in
-  let open Lwt_js_events in
-  let handle_hover planet node =
-    Lwt.async
-      (fun () -> 
-        let planet = To_dom.of_input planet in
-        mouseovers
-          planet
-          (fun _ _ ->
-            light_up node ;
-            mouseout planet >|= (fun _ -> light_down node)))
-  in
-  let handle_select planet node = 
-    Lwt.async 
-      (fun () -> 
-        let planet = To_dom.of_input planet in
-        clicks
-          planet
-          (fun _ _ -> Lwt.return (select_node node)))
-  in
-  let handle_clean planet = 
-    Lwt.async 
-      (fun () -> 
-        let planet = To_dom.of_input planet in
-        clicks
-          planet
-          (fun _ _ -> Lwt.return (clean_node ())))
-  in
-  let aux button = function
-    |	Some node -> handle_hover button node ; handle_select button node
-    | None -> handle_clean button
-  in 
-  aux
+  let on_hover _ node = 
+	up class_node_hover node ; Lwt.return () 
 
+  let on_leave _ node = 
+	down class_node_hover node ; Lwt.return ()
+
+  let on_dummy current = match !current with 
+      Some cur_b -> down class_node_select cur_b ; Lwt.return ()
+    | None -> Lwt.return ()
+
+  let on_click current node = 
+    lwt _ = on_dummy current in 
+    current := Some node ;
+    up class_node_select node ;
+	Lwt.return ()
+
+end
+
+let get_init_planet = 
+  let module H = HoverGroup (LightActions) in
+  H.get_init
 }}		 
 
 {shared{
-type aux = Html5_types.input Eliom_content_core.Html5.elt -> 
-  Html5_types.button Eliom_content_core.Html5.elt option -> unit
+type aux = Dom_html.eventTarget Js.t -> 
+  Dom_html.element Js.t option -> unit
 }}
 
 let make_planet_list_form form_planet nodes project =
@@ -279,7 +252,11 @@ let make_planet_list_form form_planet nodes project =
   let make_planet_button (planet_id,node_id) = 
     let node = hashtbl_find nodes node_id in
     let planet = int64_radio ~name:form_planet ~value:planet_id () in
-    ignore {unit{ %init_planet %planet %node }} ;
+    ignore {unit{ 
+		%init_planet 
+			(To_dom.of_input %planet :> Dom_html.eventTarget Js.t) 
+			(opt_map To_dom.of_button %node :> Dom_html.element Js.t option) 
+	  }} ;
     planet in
   let aux_users (user, planet_list) =
     let free_planets, planets = 

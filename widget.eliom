@@ -13,7 +13,6 @@ open Auth
 open EvePI_db
 open Utility
 
-
 (** {1 Project} *)
 
 let make_link_member_project (project_id,project_name) = 
@@ -154,19 +153,72 @@ let _ =
 
 (** {1 Planet widgets} *)
 
-let format_planet_list format_info list =
-  let aux_planet (info,typ) =
-    i
-      ~a:[a_title (format_info info); lclasses [typ;"planet"]]
-      [] in
-  List.map aux_planet list
+{client{
+module PopActions = struct 
+  
+  open Popover
+
+  type t = Dom_html.element Js.t
+
+  let on_hover current target = match !current with 
+	| Some _ -> Lwt.return ()
+	| None -> Lwt.return (show target) 
+
+  let on_leave current target = match !current with
+	| Some _ -> Lwt.return ()
+	| None -> Lwt.return (hide target)
+
+  let on_click current target = 
+	(match !current with
+	  | Some cur when cur == target -> hide target ; current := None
+	  | Some cur -> hide cur ; show target ; current := Some target 
+	  | None -> current := Some target) ;
+	Lwt.return ()
+
+  let on_dummy current =
+	current := None ;
+	Lwt.return ()
+   
+end
+
+let get_init_planet = 
+  let module H = HoverGroup (PopActions) in
+  H.get_init
+}}
+
+{shared{
+type aux = Dom_html.eventTarget Js.t -> 
+  Dom_html.element Js.t option -> unit
+}}
+
+let format_planet init format_info (position,info,typ) = 
+  let planet = 
+	i 
+      ~a:[a_title position; lclasses [typ;"planet"]]
+      [] 
+  in
+  ignore {unit{ 
+	  let planet = Html5.To_dom.of_i %planet in
+	  Popover.apply_with_html
+		~content:(Html5.To_dom.of_div (Html5.F.div [ %(format_info info) ])) 
+		~trigger:Manual
+		planet ;
+	  %init 
+		  (planet :> Dom_html.eventTarget Js.t) 
+		  (Some planet :> Dom_html.element Js.t option)
+	}} ;
+  planet 
+
+let format_planet_list init format_info list =
+  List.map (format_planet init format_info) list
 
 let format_grouped_planet_list format_group format_info list =
+  let init = {aux{ get_init_planet () }} in
   let aux_group (group, l) =
 	let planets =
 	  match l with
 		| [] -> [span []]
-		| _ -> format_planet_list format_info l
+		| _ -> format_planet_list init format_info l
 	in
     (dt (format_group group),[]),(dd planets,[])
   in
@@ -185,10 +237,26 @@ let user_planet_list_grouped ~arrange ~format_group ~format_info user_id =
 let make_planet_list_by_loc user_id = 
   let arrange p =
     lwt (name,typ,system) = Sdd.get_info (Helpers.loc p) in
-  	Lwt.return (system,(name,typ))
+	let note = (Helpers.note_opt p) in
+	lwt product = 
+	  lwt_opt_map 
+		(fun p -> lwt tip = get_typeid p in Sdd.get_name tip) 
+		(Helpers.prod_opt p) in 
+	lwt project = 
+	  lwt_opt_map 
+		(fun x -> lwt name = QProject.get_name x in Lwt.return (x,name))
+		(Helpers.proj_opt p)
+  	in Lwt.return (system,(name,(project,product,note),typ))
   in
   let format_group x = [pcdata x] in
-  let format_info = id in
+  let format_info (proj,prod,note) = 
+	let open Html5.D in
+	let proj = opt_map_list
+		(fun p -> [pcdata "Project : " ; make_link_member_project p ; br ()]) proj in
+	let product = opt_map_list (fun p -> [pcdata ("Product : "^p) ; br ()]) prod in
+	let note = opt_map_list (fun n -> [pcdata n]) note in 
+	div (proj @ product @ note)
+  in 
   user_planet_list_grouped ~arrange ~format_group ~format_info user_id
 
 let make_planet_list_by_project user_id =
@@ -199,13 +267,13 @@ let make_planet_list_by_project user_id =
 	  | Some x -> 
 		  lwt name = QProject.get_name x in 
 		  Lwt.return (Some (x,name))
-	in Lwt.return (project, (name,typ))
+	in Lwt.return (project,(name,(),typ))
   in
   let format_group = function
 	| None -> [pcdata "Unnafiliated"]
 	| Some p -> [make_link_member_project p] 
   in 
-  let format_info = id in
+  let format_info () = Html5.F.div [] in
   user_planet_list_grouped ~arrange ~format_group ~format_info user_id
 
 let make_free_planet_list project_id =

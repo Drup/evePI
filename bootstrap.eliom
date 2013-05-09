@@ -224,6 +224,58 @@ module ToogleClass (Class : CLASS) = struct
 end
 }}
 
+(** {2 HoverGroup}
+	Do stuff when hovering/clicking elements in a group *)
+{shared{
+module type HoverActions = sig
+  type t 
+  val on_hover : t option ref -> t -> unit Lwt.t
+  val on_leave : t option ref -> t -> unit Lwt.t
+  val on_click : t option ref -> t -> unit Lwt.t
+  val on_dummy : t option ref -> unit Lwt.t
+end
+}}
+
+{client{
+module HoverGroup (G : HoverActions) = struct 
+  
+  open Lwt_js_events
+  
+  let get_init () =
+	let current_target = ref None in
+	let handle_hover trigger target =
+	  Lwt.async
+		(fun () -> 
+		   mouseovers
+			 trigger
+			 (fun _ _ ->
+				lwt _ = G.on_hover current_target target in
+				mouseout trigger >>= 
+				(fun _ -> G.on_leave current_target target)))
+	in
+	let handle_click trigger target = 
+	  Lwt.async 
+		(fun () -> 
+		   clicks
+			 trigger
+			 (fun _ _ -> G.on_click current_target target))
+	in 
+	let handle_dummy trigger = 
+	  Lwt.async 
+		(fun () -> 
+		   clicks
+			 trigger
+			 (fun _ _ -> G.on_dummy current_target))
+	in 
+	let init_trigger trigger = function
+	  | Some elem -> 
+		  handle_hover trigger elem ; handle_click trigger elem
+	  | None -> handle_dummy trigger
+	in 
+	init_trigger
+
+end
+}}
 
 (** {2 Typeahead}
     http://twitter.github.io/bootstrap/javascript.html#typeahead 
@@ -297,22 +349,133 @@ end
 
 }}
 
-(* TODO implement the various hook functions *)
-let typeahead
-    ?a ?items ?minLength 
-    ?matcher ?sorter ?updater ?highligter source =
-  let to_string = opt_map (Printf.sprintf "%i") in
-  let source = "[ \"" ^ String.concat "\",\"" source ^ "\"]" in
-  let user_data = 
-    [ "items", to_string items ; 
-      "minLength", to_string minLength ;
-    ] in
-  let a = 
-    a_class ["typeahead"] ::
-      a_user_data "provide" "typeahead" ::
-      a_user_data "source" source ::
-      a_input_type `Text ::
-      match a with None -> [] | Some l -> l in
-  let a = add_user_data a user_data in
-  Raw.input ~a ()
+{shared{
 
+type position = 
+  Right | Left | Top | Bottom
+
+
+type trigger = 
+  Click | Hover | Focus | Manual
+
+}}
+
+{client{
+
+let js_position = 
+  let right = Js.string "right" in 
+  let left = Js.string "left" in 
+  let top = Js.string "top" in 
+  let bottom = Js.string "bottom" in 
+  function
+	| Right -> right
+	| Left -> left
+	| Top -> top
+	| Bottom -> bottom
+
+
+let js_trigger = 
+  let click = Js.string "click" in 
+  let hover = Js.string "hover" in 
+  let focus = Js.string "focus" in 
+  let manual = Js.string "manual" in 
+  function
+	| Click -> click
+	| Hover -> hover
+	| Focus -> focus
+	| Manual -> manual
+
+
+
+module Popover = struct
+
+  open Js
+  open Html5.D
+  module U = Js.Unsafe 
+
+  let apply
+	  ?(animation : bool t option)
+	  ?placement
+	  ?(selector : js_string t option)
+	  ?trigger
+	  ?(title : js_string t option)
+	  ?(content : js_string t option)
+	  ?(delay : float t option)
+	  ?(container : js_string t option)
+      (e : #Dom_html.element t)
+	=
+    let opt_inject x = opt_map U.inject x in
+	let placement =  opt_map (fun x -> U.inject (js_position x)) placement in
+	let trigger =  opt_map (fun x -> U.inject (js_trigger x)) trigger in
+    let user_data = 
+      [ "animation", opt_inject animation ; 
+		"placement", placement ; 
+		"selector", opt_inject selector ; 
+		"trigger", trigger ; 
+		"title", opt_inject title ;  
+		"content", opt_inject content ; 
+		"delay", opt_inject delay ; 
+		"container", opt_inject container ; 
+      ] in
+    let rec make_object obj = function
+      | [] -> obj
+      | (_, None)::l -> make_object obj l
+      | (s, Some v) :: l -> U.set obj s v ; make_object obj l
+    in 
+    let obj = make_object (U.obj [| |]) user_data in
+    let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in
+    ignore (U.meth_call data "popover" [| U.inject obj|] )
+
+  let apply_with_html
+	  ?(animation : bool t option)
+	  ?placement
+	  ?(selector : js_string t option)
+	  ?trigger
+	  ?(title : #Dom_html.element t option)
+	  ?(content : #Dom_html.element t option)
+	  ?(delay : float t option)
+	  ?(container : js_string t option)
+      (e : #Dom_html.element t)
+	=
+    let opt_inject x = opt_map U.inject x in
+	let placement = opt_map (fun x -> U.inject (js_position x)) placement in
+	let trigger =  opt_map (fun x -> U.inject (js_trigger x)) trigger in
+	let title = opt_map (fun x -> U.inject x##innerHTML) title in 
+	let content = opt_map (fun x -> U.inject x##innerHTML) content in 
+    let user_data = 
+      [ "animation", opt_inject animation ; 
+		"placement", placement ; 
+		"selector", opt_inject selector ; 
+		"trigger", trigger ; 
+		"title", title ;  
+		"content", content ; 
+		"delay", opt_inject delay ; 
+		"container", opt_inject container ; 
+      ] in
+    let rec make_object obj = function
+      | [] -> obj
+      | (_, None)::l -> make_object obj l
+      | (s, Some v) :: l -> U.set obj s v ; make_object obj l
+    in 
+    let obj = make_object (U.obj [| ("html",U.inject _true) |]) user_data in
+    let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in
+    ignore (U.meth_call data "popover" [| U.inject obj|] )
+
+  let show (e: #Dom_html.element t) = 
+	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
+	ignore (U.meth_call data "popover" [| U.inject (string "show")|])
+
+  let hide (e: #Dom_html.element t) = 
+	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
+	ignore (U.meth_call data "popover" [| U.inject (string "hide")|])
+
+  let toogle (e: #Dom_html.element t) = 
+	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
+	ignore (U.meth_call data "popover" [| U.inject (string "toogle")|])
+
+  let destroy (e: #Dom_html.element t) = 
+	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
+	ignore (U.meth_call data "popover" [| U.inject (string "destroy")|])
+
+end
+}}

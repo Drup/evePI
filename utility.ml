@@ -6,6 +6,14 @@ let opt_map f = function
   | None -> None 
   | Some s -> Some (f s)
 
+let lwt_opt_map f = function
+  | None -> Lwt.return None
+  | Some s -> lwt s = f s in Lwt.return (Some s)
+
+let opt_iter f = function
+  | None -> ()
+  | Some s -> f s
+
 let opt_string = function 
   | Some s -> s
   | None -> ""
@@ -13,6 +21,14 @@ let opt_string = function
 let opt_unnamed = function
   | Some s -> s
   | None -> "Unnamed"
+
+let opt_map_list f = function
+  | Some x -> f x
+  | None -> []
+
+let opt_list = function
+  | Some x -> x
+  | None -> []
 
 (** List related *)
 
@@ -26,7 +42,7 @@ let list_grouping l =
   in List.fold_left aux [] l
 
 let list_grouping_sort l = 
-  list_grouping (List.sort (fun x y -> compare (fst x) (fst y)) l)
+  list_grouping (List.sort (fun x y -> compare y x) l)
 
 (** Hshtbl *)
 
