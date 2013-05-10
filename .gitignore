@@ -15,3 +15,6 @@ local
 
 .depend
 .typerex
+
+*.js
+*.png
