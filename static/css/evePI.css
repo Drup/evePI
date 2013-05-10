@@ -6,6 +6,145 @@ h3 [class^="icon-"] {
 	margin-left: 1px ;
 }
 
+.planettip{
+	display : none ;
+	padding:1px;
+	text-align:left;
+	white-space:normal;
+	background-color:#131517;
+	border:1px solid #ccc;
+	border:1px solid rgba(0,0,0,0.2);
+	-webkit-border-radius:6px;
+	-moz-border-radius:6px;
+	border-radius:6px;
+	-webkit-box-shadow:0 5px 10px rgba(0,0,0,0.2);
+	-moz-box-shadow:0 5px 10px rgba(0,0,0,0.2);
+	box-shadow:0 5px 10px rgba(0,0,0,0.2);
+	-webkit-background-clip:padding-box;
+	-moz-background-clip:padding;
+	background-clip:padding-box
+}
+
+.planettip.top{
+	margin-top:-10px
+}
+
+.planettip.right{
+	margin-left:10px
+}
+
+.planettip.bottom{
+	margin-top:10px
+}
+
+.planettip.left{
+	margin-left:-10px
+}
+
+.planettip-title{
+	padding:8px 14px;
+	margin:0;
+	font-size:14px;
+	font-weight:normal;
+	line-height:18px;
+	background-color:#131517;
+	border-bottom:1px solid #070809;
+	-webkit-border-radius:5px 5px 0 0;
+	-moz-border-radius:5px 5px 0 0;
+	border-radius:5px 5px 0 0
+}
+
+.planettip-title:empty{
+	display:none
+}
+
+.planettip-content{
+	padding:9px 14px
+}
+
+.planettip .arrow,.planettip .arrow:after{
+	position:absolute;
+	display:block;
+	width:0;
+	height:0;
+	border-color:transparent;
+	border-style:solid
+}
+
+.planettip .arrow{
+	border-width:11px
+}
+
+.planettip .arrow:after{
+	border-width:10px;
+	content:""
+}
+
+.planettip.top .arrow{
+	bottom:-11px;
+	left:50%;
+	margin-left:-11px;
+	border-top-color:#999;
+	border-top-color:rgba(0,0,0,0.25);
+	border-bottom-width:0
+}
+
+.planettip.top .arrow:after{
+	bottom:1px;
+	margin-left:-10px;
+	border-top-color:#131517;
+	border-bottom-width:0
+}
+
+.planettip.right .arrow{
+	top:50%;
+	left:-11px;
+	margin-top:-11px;
+	border-right-color:#999;
+	border-right-color:rgba(0,0,0,0.25);
+	border-left-width:0
+}
+
+.planettip.right .arrow:after{
+	bottom:-10px;
+	left:1px;
+	border-right-color:#131517;
+	border-left-width:0
+}
+
+.planettip.bottom .arrow{
+	top:-11px;
+	left:50%;
+	margin-left:-11px;
+	border-bottom-color:#999;
+	border-bottom-color:rgba(0,0,0,0.25);
+	border-top-width:0
+}
+
+.planettip.bottom .arrow:after{
+	top:1px;
+	margin-left:-10px;
+	border-bottom-color:#131517;
+	border-top-width:0
+}
+
+.planettip.left .arrow{
+	top:50%;
+	right:-11px;
+	margin-top:-11px;
+	border-left-color:#999;
+	border-left-color:rgba(0,0,0,0.25);
+	border-right-width:0
+}
+
+.planettip.left .arrow:after{
+	right:1px;
+	bottom:-10px;
+	border-left-color:#131517;
+	border-right-width:0
+}
+
+
 html, body {
 	 height: 100%;
 	 margin: 0px ;

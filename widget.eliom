@@ -3,7 +3,7 @@ open Eliom_lib
 open Eliom_content
 open Eliom_service
 open Eliom_content.Html5
-open Eliom_content.Html5.D
+open Eliom_content.Html5.F
 open Bootstrap
 }}
 
@@ -156,7 +156,7 @@ let _ =
 {client{
 module PopActions = struct 
   
-  open Popover
+  open Tooltip
 
   type t = Dom_html.element Js.t
 
@@ -194,23 +194,20 @@ type aux = Dom_html.eventTarget Js.t ->
 let format_planet init format_info (position,info,typ) = 
   let planet = 
 	i 
-      ~a:[a_title position; lclasses [typ;"planet"]]
+      ~a:[a_id position ;lclasses [typ;"planet"]]
       [] 
   in
-  ignore {unit{ 
-	  let planet = Html5.To_dom.of_i %planet in
-	  Popover.apply_with_html
-		~content:(Html5.To_dom.of_div (Html5.F.div [ %(format_info info) ])) 
-		~trigger:Manual
-		planet ;
-	  %init 
-		  (planet :> Dom_html.eventTarget Js.t) 
-		  (Some planet :> Dom_html.element Js.t option)
-	}} ;
-  planet 
+  let tooltip = 
+	Popover_html.(layout "planettip" (Some Right)
+		[pcdata position] (format_info info)) in
+  [planet ; tooltip]
 
 let format_planet_list init format_info list =
-  List.map (format_planet init format_info) list
+  ignore {unit{ 
+	  Tooltip.apply 
+		~position:(`Center,`Right)
+		".planet" }} ;
+  List.concat (List.map (format_planet init format_info) list)
 
 let format_grouped_planet_list format_group format_info list =
   let init = {aux{ get_init_planet () }} in
@@ -251,11 +248,15 @@ let make_planet_list_by_loc user_id =
   let format_group x = [pcdata x] in
   let format_info (proj,prod,note) = 
 	let open Html5.D in
-	let proj = opt_map_list
-		(fun p -> [pcdata "Project : " ; make_link_member_project p ; br ()]) proj in
-	let product = opt_map_list (fun p -> [pcdata ("Product : "^p) ; br ()]) prod in
-	let note = opt_map_list (fun n -> [pcdata n]) note in 
-	div (proj @ product @ note)
+	let proj = 
+	  [pcdata "Project : " ; match proj with 
+			Some p -> make_link_member_project p
+		  | None -> pcdata "None"
+	  ] in
+	let product = opt_map_list (fun p -> 
+		[br () ; pcdata ("Product : "^p)]) prod in
+	let note = opt_map_list (fun n -> [br () ; pcdata n]) note in 
+	(proj @ product @ note)
   in 
   user_planet_list_grouped ~arrange ~format_group ~format_info user_id
 
@@ -273,7 +274,7 @@ let make_planet_list_by_project user_id =
 	| None -> [pcdata "Unnafiliated"]
 	| Some p -> [make_link_member_project p] 
   in 
-  let format_info () = Html5.F.div [] in
+  let format_info () = [] in
   user_planet_list_grouped ~arrange ~format_group ~format_info user_id
 
 let make_free_planet_list project_id =

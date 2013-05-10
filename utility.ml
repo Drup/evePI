@@ -14,9 +14,9 @@ let opt_iter f = function
   | None -> ()
   | Some s -> f s
 
-let opt_string = function 
+let opt_string ?(def="")= function 
   | Some s -> s
-  | None -> ""
+  | None -> def
 
 let opt_unnamed = function
   | Some s -> s
