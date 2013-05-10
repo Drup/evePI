@@ -224,12 +224,13 @@ div.tree {
 }
 
 ul.tree {
-	 margin: 0; padding: 0;
-	 padding-top: 20px; position: relative;
-	 
-	 transition: all 0.5s;
-	 -webkit-transition: all 0.5s;
-	 -moz-transition: all 0.5s;
+	margin: 0; padding: 0;
+	padding-top: 20px; position: relative;
+	white-space: nowrap;
+	transition: all 0.5s;
+	-webkit-transition: all 0.5s;
+	-moz-transition: all 0.5s;
+	text-align: center ; 
 }
 
 li.tree {	
