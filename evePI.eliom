@@ -321,19 +321,11 @@ let menu user =
     ]
   in
   lwt projects = QProject.fetch_by_user user in
-  let projects = List.map (fun x -> li [make_link_member_project x]) projects in
+  let projects = 
+	List.map (fun x -> li [make_link_member_project x]) projects in
   let projects = match projects with
 	| [] -> []
-	| _ -> [
-	  li ~a:(classe "dropdown") 
-        (Raw.a ~a:[
-		   lclasse "dropdown-toggle" ;
-		   a_user_data "toggle" "dropdown" ;
-		   a_href (uri_of_string (fun () -> "#")) ;
-         ]
-		   [pcdata "My Projects"; caret] ::
-		   [ul ~a:[lclasse "dropdown-menu"] projects])
-	]
+	| _ -> [ Dropdown.nav [pcdata "My Projects"; caret] projects ]
   in 
   Lwt.return (navbar 
       ~classes:["navbar-static-top"]

@@ -46,6 +46,8 @@ let spancs s l =
 let center l = 
   div ~a:(classe "text-center") l
 
+let dummy_a ?(a=[]) content = 
+  Raw.a ~a:(a_href (uri_of_string (fun () -> "#")) :: a) content
 
 (** Des éléments bootstrap *)
 
@@ -178,6 +180,46 @@ let div ?(a=[]) id content =
 let a = a_collapse
 end
 
+}}
+
+{shared{
+(** {2 Dropdown Menus} *)
+
+
+module Dropdown = struct
+  
+  let a_dropdown = a_user_data "toggle" "dropdown"
+
+  let wrap (elem: ?a:'a -> 'b) ?(a=[]) ?(right=false) title content = 
+	let menu_class = if right then ["pull-right"] else [] in 
+	[elem
+	   ~a:(
+		 a_class ["dropdown-toggle"] ::
+		 a_dropdown ::
+	   a)
+	   title  ;
+	 ul ~a:[a_class ("dropdown-menu"::menu_class)] content
+	]
+
+  let a ?(right=false) title content = 
+	wrap 
+	  Raw.a 
+	  ~a:[a_href (uri_of_string (fun () -> "#"))]
+	  ~right title content 
+
+  let nav ?(right=false) title content =
+	li ~a:(classe "dropdown") (a ~right title content)
+
+  let btn ?(right=false) title content = 
+	wrap 
+	  (button ~button_type:`Button) 
+	  ~a:[a_class ["btn"]]
+	  ~right title content 
+
+  let btngroup ?(right=false) title content = 
+	divc "btn-group" (btn ~right title content)
+
+end
 }}
 
 (** {2 ToogleClass} 
@@ -577,14 +619,16 @@ module Tooltip = struct
     let obj = make_object (U.obj [| |]) user_data in
     let data = U.fun_call (U.variable "jQuery") [|U.inject selector|] in
     ignore (U.meth_call data "tooltip" [| U.inject obj|] )
-
+	  
   let show (e: #Dom_html.element t) = 
 	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	ignore (U.meth_call data "tooltip" [| U.inject (string "show")|])
+	let tip = U.meth_call data "tooltip" [| |] in 
+	ignore (U.meth_call tip "show" [| |])
 
   let hide (e: #Dom_html.element t) = 
 	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	ignore (U.meth_call data "tooltip" [| U.inject (string "hide")|])
+	let tip = U.meth_call data "tooltip" [| |] in 
+	ignore (U.meth_call tip "hide" [| |])
 
 
 
