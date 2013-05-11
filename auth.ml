@@ -141,4 +141,12 @@ struct
 	in
 	Eliom_registration.Any.register f
 
+  let unit_register action = 
+	let f = 
+	  wrap_handler 
+		(fun () -> Eliom_reference.get user)
+		(fun _ _ -> Lwt.return ())
+		action
+	in Eliom_registration.Unit.register f
+
 end
