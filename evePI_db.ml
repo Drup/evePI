@@ -245,7 +245,7 @@ let create ?prod ?note ?project user location =
 
 let update_project planet_id project =
   query
-	 <:update< p in $planets$ := { project_id = $int64:project$ } |
+	 <:update< p in $planets$ := { project_id = $int64:project$ ; product_id = null } |
 	  p.id = $int64:planet_id$ 
 	  >>
 
@@ -261,6 +261,18 @@ let update_notes planet_id notes =
 	  p.id = $int64:planet_id$ 
 	  >>
 
+let delete planet_id = 
+  query
+	<:delete< planet in $planets$ | planet.id = $int64:planet_id$ >>
+
+let is_attached planet_id user_id = 
+  (query
+	 <:select< planet |
+			  planet in $planets$ ;
+			  planet.user_id = $int64:user_id$ ;
+			  planet.id = $int64:planet_id$ ;
+			  >>)
+  >|= (function [] -> false | _ -> true)
 
 let fetch_by_user user =
   view

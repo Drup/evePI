@@ -6,6 +6,12 @@ h3 [class^="icon-"] {
 	margin-left: 1px ;
 }
 
+.planettip h3 [class^="icon-"] {
+	margin-top: 1px ;
+	margin-left: 4px ;
+}
+
+/* tooltip on planets, copied from bootstrap's popover */
 .planettip{
 	display : none ;
 	padding:1px;
@@ -145,6 +151,16 @@ h3 [class^="icon-"] {
 }
 
 
+/* Some theming on the inside of planets tooltips */
+
+.planettip .dropdown, .planettip .dropup {
+	display: inline ;
+}
+
+.planettip i {
+	margin-left: 5px ;
+}
+
 html, body {
 	 height: 100%;
 	 margin: 0px ;
@@ -193,7 +209,7 @@ body {
 	 margin-left : 165px !important ;
 }
 
-.planet-list span {
+span.planet-list{
 	 margin: 0 5px ;
 }
 

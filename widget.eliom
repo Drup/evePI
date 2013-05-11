@@ -153,6 +153,58 @@ let _ =
 
 (** {1 Planet widgets} *)
 
+(** Delete a planet *)
+
+let delete_planet_service = 
+  Eliom_service.post_coservice'
+	~post_params:Eliom_parameter.(int64 "planet") ()
+
+let delete_planet_link planet = 
+  dummy_a ~a:[ 
+	a_title "Delete this planet" ; 
+	a_onclick {{ 
+		fun _ -> Lwt.ignore_result (
+			Eliom_client.change_page ~service:%delete_planet_service () (%planet))
+	  }}]
+	[icon ~white:true "remove"]
+
+let _ = 
+  action_register
+	~service:delete_planet_service
+	(fun user () planet -> 
+	   lwt is_user = QPlanet.is_attached planet user.id in 
+	   if is_user then
+		 lwt _ = QPlanet.delete planet in 
+		 Lwt.return ()
+	   else 
+		 Lwt.return ())
+
+
+(** Change the project of a planet *)
+
+let change_project_service = 
+  Eliom_service.post_coservice'
+	~post_params:Eliom_parameter.(int64 "planet" ** int64 "project") ()
+
+let change_project_link planet (project_id,project_name) = 
+  dummy_a ~a:[ a_onclick {{ 
+	  fun _ -> Lwt.ignore_result (
+	   Eliom_client.change_page ~service:%change_project_service () (%planet,%project_id))
+	}}]
+	[pcdata project_name] 
+
+let _ = 
+  action_register
+	~service:change_project_service
+	(fun user () (planet,project) -> 
+	   lwt is_user = QPlanet.is_attached planet user.id in 
+	   if is_user then
+		 lwt _ = QPlanet.update_project planet project in 
+		 Lwt.return ()
+	   else 
+		 Lwt.return ())
+
+
 {client{
 module PopActions = struct 
   
@@ -181,9 +233,9 @@ module PopActions = struct
    
 end
 
-let get_init_planet = 
+let get_init_planet trig tip = 
   let module H = HoverGroup (PopActions) in
-  H.get_init
+  H.get_init trig tip
 }}
 
 {shared{
@@ -191,31 +243,30 @@ type aux = Dom_html.eventTarget Js.t ->
   Dom_html.element Js.t option -> unit
 }}
 
-let format_planet init format_info (position,info,typ) = 
+let format_planet format_info (position,id,info,typ) = 
   let planet = 
 	i 
-      ~a:[a_id position ;lclasses [typ;"planet"]]
+      ~a:[a_class [typ;"planet"]]
       [] 
   in
   let tooltip = 
 	Popover_html.(layout "planettip" (Some Right)
-		[pcdata position] (format_info info)) in
+		[pcdata position ; delete_planet_link id] (format_info info)) in
   [planet ; tooltip]
 
-let format_planet_list init format_info list =
+let format_planet_list format_info list =
   ignore {unit{ 
 	  Tooltip.apply 
 		~position:(`Center,`Right)
 		".planet" }} ;
-  List.concat (List.map (format_planet init format_info) list)
+  List.concat (List.map (format_planet format_info) list)
 
 let format_grouped_planet_list format_group format_info list =
-  let init = {aux{ get_init_planet () }} in
   let aux_group (group, l) =
 	let planets =
 	  match l with
 		| [] -> [span []]
-		| _ -> format_planet_list init format_info l
+		| _ -> format_planet_list format_info l
 	in
     (dt (format_group group),[]),(dd planets,[])
   in
@@ -242,16 +293,26 @@ let make_planet_list_by_loc user_id =
 	lwt project = 
 	  lwt_opt_map 
 		(fun x -> lwt name = QProject.get_name x in Lwt.return (x,name))
-		(Helpers.proj_opt p)
-  	in Lwt.return (system,(name,(project,product,note),typ))
+		(Helpers.proj_opt p) in
+	lwt all_projects = QProject.fetch_by_user user_id in 
+	Lwt.return 
+	  (system,
+	   (name,Helpers.id p,(Helpers.id p,project,all_projects,product,note),
+		typ))
   in
   let format_group x = [pcdata x] in
-  let format_info (proj,prod,note) = 
+  let format_info (planet_id,proj,all_proj,prod,note) = 
 	let open Html5.D in
+	let all_proj = 
+	  li ~a:[a_class ["disabled"]] [dummy_a [pcdata "Change project"]] ::
+		List.map (fun x -> li [change_project_link planet_id x]) all_proj in
 	let proj = 
-	  [pcdata "Project : " ; match proj with 
-			Some p -> make_link_member_project p
-		  | None -> pcdata "None"
+	  [pcdata "Project : " ; 
+	   divc "dropdown" (
+		 (match proj with 
+			 Some p -> make_link_member_project p
+		   | None -> pcdata "None") 
+		 :: (Dropdown.a [icon ~white:true "edit"] all_proj))
 	  ] in
 	let product = opt_map_list (fun p -> 
 		[br () ; pcdata ("Product : "^p)]) prod in
@@ -268,7 +329,7 @@ let make_planet_list_by_project user_id =
 	  | Some x -> 
 		  lwt name = QProject.get_name x in 
 		  Lwt.return (Some (x,name))
-	in Lwt.return (project,(name,(),typ))
+	in Lwt.return (project,(name,Helpers.id p,(),typ))
   in
   let format_group = function
 	| None -> [pcdata "Unnafiliated"]

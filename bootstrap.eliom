@@ -593,9 +593,9 @@ module Tooltip = struct
 	  ?(relative : bool t option)
 	  ?(tip : js_string t option)
 	  ?(tipClass : js_string t option)
-	  selector
+      e
 	=
-	let selector = string selector in 
+	let e = string e in 
     let opt_inject x = opt_map U.inject x in
 	let position = opt_map (fun x -> U.inject (js_pos x)) position in
 	let offset = opt_map (fun (x,y) -> U.inject (array [| x ; y |])) offset in
@@ -617,18 +617,20 @@ module Tooltip = struct
       | (s, Some v) :: l -> U.set obj s v ; make_object obj l
     in 
     let obj = make_object (U.obj [| |]) user_data in
-    let data = U.fun_call (U.variable "jQuery") [|U.inject selector|] in
+    let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in
     ignore (U.meth_call data "tooltip" [| U.inject obj|] )
 	  
   let show (e: #Dom_html.element t) = 
+	Eliom_lib.debug "show !" ;
 	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	let tip = U.meth_call data "tooltip" [| |] in 
-	ignore (U.meth_call tip "show" [| |])
+	let api = U.meth_call data "data" [| U.inject (string "tooltip") |] in 
+	ignore (U.meth_call api "show" [| |])
 
   let hide (e: #Dom_html.element t) = 
+	Eliom_lib.debug "hide !" ;
 	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	let tip = U.meth_call data "tooltip" [| |] in 
-	ignore (U.meth_call tip "hide" [| |])
+	let api = U.meth_call data "data" [| U.inject (string "tooltip") |] in 
+	ignore (U.meth_call api "hide" [| |])
 
 
 
