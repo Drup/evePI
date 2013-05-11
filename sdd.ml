@@ -166,7 +166,7 @@ let get_planets_by_system system_name =
 		nullable system.solarSystemID = planet.solarSystemID ;
 		planet.groupID = $int32:planet_groupID$ ;
 		>>)
-  >|= List.map (fun s -> s#!id, opt_unnamed s#?name, opt_planet_type s#?typ)
+  >|= List.map (fun s -> s#!id, opt_unnamed s#?name, id_to_planet (opt_planet_type s#?typ))
 
 (** Get planet info : (name,type,system) *)
 let get_info planet_id = 

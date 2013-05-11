@@ -99,7 +99,8 @@ let select_system_handler slist location planet_div select_system =
     lwt list = 
       %rpc_get_planets_by_system current_system in
     let list = List.map 
-        (fun (id,name,typ) -> Option ([],id,Some (pcdata name),true)) list in
+        (fun (id,name,typ) -> 
+		   Option ([],id,Some (pcdata (name ^ " ("^typ^")")),true)) list in
     let head,tail = match list with
       | [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
       | hd::tl -> hd,tl in
