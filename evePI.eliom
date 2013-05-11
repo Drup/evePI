@@ -361,7 +361,9 @@ let () =
           make_page 
             user.id
             "Eve PI"
-            [ center [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
+            [ center 
+				[h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
+			  h3 [pcdata "My planets"] ;
               planets ;
               form ;
             ]

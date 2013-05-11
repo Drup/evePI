@@ -11,6 +11,14 @@ h3 [class^="icon-"] {
 	margin-left: 4px ;
 }
 
+.planet-list .dl-horizontal dt {
+	width : 100px ;
+}
+
+.planet-list .dl-horizontal dd {
+	margin-left: 120px ;
+}
+
 /* tooltip on planets, copied from bootstrap's popover */
 .planettip{
 	display : none ;
