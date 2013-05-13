@@ -160,11 +160,12 @@ let delete_planet_service =
 	~post_params:Eliom_parameter.(int64 "planet") ()
 
 let delete_planet_link planet = 
-  dummy_a ~a:[ 
+  Raw.a ~a:[ 
 	a_title "Delete this planet" ; 
+	a_class ["link"] ;
 	a_onclick {{ 
-		fun _ -> Lwt.ignore_result (
-			Eliom_client.change_page ~service:%delete_planet_service () (%planet))
+		fun _ -> Eliom_client.exit_to 
+			~service:%delete_planet_service () (%planet)
 	  }}]
 	[icon ~white:true "remove"]
 
@@ -187,11 +188,13 @@ let change_project_service =
 	~post_params:Eliom_parameter.(int64 "planet" ** int64 "project") ()
 
 let change_project_link planet (project_id,project_name) = 
-  dummy_a ~a:[ a_onclick {{ 
-	  fun _ -> Lwt.ignore_result (
-	   Eliom_client.change_page ~service:%change_project_service () (%planet,%project_id))
-	}}]
-	[pcdata project_name] 
+  Raw.a ~a:[
+	a_class ["link"] ;
+	a_onclick {{ 
+		fun _ -> Eliom_client.exit_to
+		  ~service:%change_project_service () (%planet,%project_id)
+	  }}]
+	[pcdata project_name]
 
 let _ = 
   action_register
@@ -297,14 +300,15 @@ let make_planet_list_by_loc user_id =
 	lwt all_projects = QProject.fetch_by_user user_id in 
 	Lwt.return 
 	  (system,
-	   (name,Helpers.id p,(Helpers.id p,project,all_projects,product,note),
+	   (name,Helpers.id p,
+		(Helpers.id p,project,all_projects,product,note),
 		typ))
   in
   let format_group x = [pcdata x] in
   let format_info (planet_id,proj,all_proj,prod,note) = 
 	let open Html5.D in
 	let all_proj = 
-	  li ~a:[a_class ["disabled"]] [dummy_a [pcdata "Change project"]] ::
+	  li ~a:[a_class ["disabled"]] [Raw.a [pcdata "Change project"]] ::
 		List.map (fun x -> li [change_project_link planet_id x]) all_proj in
 	let proj = 
 	  [pcdata "Project : " ; 
@@ -323,20 +327,65 @@ let make_planet_list_by_loc user_id =
 
 let make_planet_list_by_project user_id =
   let arrange p =
-	lwt (name,typ,system) = Sdd.get_info (Helpers.loc p) in
-	lwt project = match (Helpers.proj_opt p) with
-		None -> Lwt.return None
-	  | Some x -> 
-		  lwt name = QProject.get_name x in 
-		  Lwt.return (Some (x,name))
-	in Lwt.return (project,(name,Helpers.id p,(),typ))
+    lwt (name,typ,system) = Sdd.get_info (Helpers.loc p) in
+	let note = (Helpers.note_opt p) in
+	lwt product = 
+	  lwt_opt_map 
+		(fun p -> lwt tip = get_typeid p in Sdd.get_name tip) 
+		(Helpers.prod_opt p) in 
+	lwt project = 
+	  lwt_opt_map 
+		(fun x -> lwt name = QProject.get_name x in Lwt.return (x,name))
+		(Helpers.proj_opt p) in
+	lwt all_projects = QProject.fetch_by_user user_id in 
+	Lwt.return (
+	  project,
+	  (name,Helpers.id p,
+	   (Helpers.id p,project,all_projects,product,note),
+	   typ))
   in
   let format_group = function
-	| None -> [pcdata "Unnafiliated"]
+	| None -> [pcdata "Unafiliated"]
 	| Some p -> [make_link_member_project p] 
   in 
-  let format_info () = [] in
+  let format_info (planet_id,proj,all_proj,prod,note) = 
+	let open Html5.D in
+	let all_proj = 
+	  li ~a:[a_class ["disabled"]] [Raw.a [pcdata "Change project"]] ::
+		List.map (fun x -> li [change_project_link planet_id x]) all_proj in
+	let proj = 
+	  [pcdata "Project : " ; 
+	   divc "dropdown" (
+		 (match proj with 
+			 Some p -> make_link_member_project p
+		   | None -> pcdata "None") 
+		 :: (Dropdown.a [icon ~white:true "edit"] all_proj))
+	  ] in
+	let product = opt_map_list (fun p -> 
+		[br () ; pcdata ("Product : "^p)]) prod in
+	let note = opt_map_list (fun n -> [br () ; pcdata n]) note in 
+	(proj @ product @ note)
+  in 
   user_planet_list_grouped ~arrange ~format_group ~format_info user_id
+
+let make_planet_list choice user_id = match choice with
+  | Some "project" -> 
+	  make_planet_list_by_project user_id
+  | Some "loc" ->
+	  make_planet_list_by_loc user_id
+  | _ ->
+	  make_planet_list_by_loc user_id
+
+let possible_sort = [ "project" ; "location" ]
+
+let dropdown_sort current = 
+  let current = match current with 
+	  Some s when List.mem s possible_sort -> s
+	| _ -> "location"
+  in 
+  Dropdown.nav [pcdata current; caret]
+	(List.map (fun s -> li [a ~service:main_sort_service [pcdata s] (Some s)])
+	   possible_sort)
 
 let make_free_planet_list project_id =
   lwt users_list = QPlanet.fetch_free_by_user project_id in

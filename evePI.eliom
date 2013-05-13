@@ -352,22 +352,27 @@ let make_page ?(css=[]) user title body =
 
 let () =
   Connected.register
-    ~service:main_service
-    (fun () () -> 
-      Lwt.return (
-        fun user ->
-          lwt form = new_planet_form user.id in
-          lwt planets = make_planet_list_by_loc user.id in
-          make_page 
-            user.id
-            "Eve PI"
-            [ center 
-				[h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
-			  h3 [pcdata "My planets"] ;
-              planets ;
-              form ;
-            ]
-      )) ;
+    ~service:main_sort_service
+    (fun sort () -> 
+       Lwt.return (
+         fun user ->
+           lwt form = new_planet_form user.id in
+           lwt planets = make_planet_list sort user.id in
+           make_page 
+             user.id
+             "Eve PI"
+             [ center 
+				 [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
+			   ul ~a:[a_class ["section-title"]] [
+				 li ~a:[a_class ["head"]] [pcdata "My planets"] ; 
+				 li ~a:[a_class ["divider"]] [] ;
+				 li [pcdata "Sort by : "] ;
+				 dropdown_sort sort ;
+			   ];
+			   planets ;
+			   form ;
+			 ]
+	   )) ;
 
   Connected.register 
     ~service:project_list_service

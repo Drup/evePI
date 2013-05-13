@@ -47,7 +47,7 @@ let center l =
   div ~a:(classe "text-center") l
 
 let dummy_a ?(a=[]) content = 
-  Raw.a ~a:(a_href (uri_of_string (fun () -> "#")) :: a) content
+  Raw.a ~a:((a_class ["link"]) :: a) content
 
 (** Des éléments bootstrap *)
 
@@ -122,10 +122,10 @@ let container_fluid ?(head=[]) = container ~postfix:"-fluid" ~head
 (** Les menus *)
 
 (* Permet de savoir si un service correspond a l'url courante *)
-let same_service_opt s sopt =
+let same_service_opt ~current s =
   let same_url url =
     make_string_uri ~absolute_path:true ~service:s () = url in
-  match sopt with
+  match current with
     | None ->
         same_url ("/"^(Eliom_request_info.get_current_sub_path_string ()))
     | Some s' -> same_url (make_string_uri ~absolute_path:true ~service:s' ())
@@ -135,7 +135,7 @@ let menu ?(prefix=[]) ?(postfix=[]) ?(active=["active"]) ?(liclasses=[]) ?(class
   let rec aux = function
     | [] -> postfix
     | (url, text)::l ->
-        (if same_service_opt url current
+        (if same_service_opt ?current url
          then (li ~a:[a_class (active@liclasses)] [a url text ()])
          else (li ~a:[a_class liclasses] [a url text ()])) :: (aux l)
   in 
@@ -204,20 +204,23 @@ module Dropdown = struct
   let a ?(right=false) title content = 
 	wrap 
 	  Raw.a 
-	  ~a:[a_href (uri_of_string (fun () -> "#"))]
+	  ~a:[a_class ["link"]]
 	  ~right title content 
 
-  let nav ?(right=false) title content =
-	li ~a:(classe "dropdown") (a ~right title content)
+  
 
-  let btn ?(right=false) title content = 
+  let nav =
+	let a_ = a in (fun ?(a=[]) ?(right=false) title content ->
+	li ~a:((a_class ["dropdown"]) :: a) (a_ ~right title content))
+
+  let btn ?(a=[]) ?(right=false) title content = 
 	wrap 
 	  (button ~button_type:`Button) 
-	  ~a:[a_class ["btn"]]
+	  ~a:(a_class ["btn"] :: a)
 	  ~right title content 
 
-  let btngroup ?(right=false) title content = 
-	divc "btn-group" (btn ~right title content)
+  let btngroup ?(a=[]) ?(right=false) title content = 
+	divc "btn-group" (btn ~a ~right title content)
 
 end
 }}

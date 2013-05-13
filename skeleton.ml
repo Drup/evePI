@@ -15,9 +15,13 @@ module App =
   end)
 
 (** Home page *)
-let main_service =
+let main_sort_service =
   Eliom_service.service
-    ~path:[""] ~get_params:Eliom_parameter.unit ()
+    ~path:[""] ~get_params:Eliom_parameter.(opt (string "sort")) ()
+
+let main_service = 
+  Eliom_service.preapply
+	~service:main_sort_service None
 
 (** The Default page if you are not logged in *)
 let default_content () =
