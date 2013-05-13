@@ -3,7 +3,10 @@ open Eliom_lib
 open Eliom_content
 open Eliom_service
 open Eliom_content.Html5
-open Eliom_content.Html5.D
+
+open Widget
+open F
+
 open Bootstrap
 }}
 
@@ -11,7 +14,6 @@ open Auth
 open Skeleton
 open Skeleton.Connected
 open EvePI_db
-open Widget
 open Utility
 
 
@@ -122,10 +124,10 @@ let new_planet_form user =
   lwt slist = Sdd.get_systems () >|= List.map snd in
   let form_fun (proj,location) =
     let select_system = 
-      Raw.input ~a:[a_input_type `Text; 
+      D.Raw.input ~a:[a_input_type `Text; 
                     a_autocomplete `Off;
                     a_placeholder "Location"] () in
-    let planet_place = span [] in
+    let planet_place = D.span [] in
     let _ = {unit{ 
         select_system_handler 
         %slist %location 
@@ -188,7 +190,7 @@ let specialize_planet_service =
     ~post_params:Eliom_parameter.(radio int64 "planet" ** int64 "product") ()
 
 let make_product_button form_prod (product_id,product_name,note) =
-  int64_button ~name:form_prod ~value:product_id [pcdata product_name]
+  D.int64_button ~name:form_prod ~value:product_id [pcdata product_name]
 
 let get_project_tree form_prod project = 
   lwt roots_id = QProject.get_roots project in
@@ -252,7 +254,7 @@ let make_planet_list_form form_planet nodes project =
   let init_planet = {aux{ get_init_planet () }} in
   let make_planet_button (planet_id,node_id) = 
     let node = hashtbl_find nodes node_id in
-    let planet = int64_radio ~name:form_planet ~value:planet_id () in
+    let planet = D.int64_radio ~name:form_planet ~value:planet_id () in
     ignore {unit{ 
 		%init_planet 
 			(To_dom.of_input %planet :> Dom_html.eventTarget Js.t) 
@@ -363,12 +365,12 @@ let () =
              evepi
              [ center 
 				 [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
-			   ul ~a:[a_class ["section-title"]] [
+			   STitle.(simple [
 				 li [h3 [pcdata "My planets"]] ; 
-				 li ~a:[a_class ["divider"]] [] ;
+				 divider () ;
 				 li [pcdata "Sort by : "] ;
 				 dropdown_sort sort ;
-			   ];
+			   ]) ;
 			   planets ;
 			   form ;
 			 ]
@@ -383,7 +385,7 @@ let () =
           lwt project_form = new_project_form () in
           make_page
             user.id
-            ("Eveπ - Projects"
+            "Eveπ - Projects"
             [ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
               project_form ;
               dl ~a:(classes []) projects_list ;
@@ -398,7 +400,7 @@ let () =
           let not_exist () = 
             make_page
               user.id
-              ("Eveπ - My Projects")
+              "Eveπ - My Projects"
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_admin () = 
@@ -442,7 +444,7 @@ let () =
           let not_exist () = 
             make_page
               user.id
-              ("Eveπ - My Projects")
+              "Eveπ - My Projects"
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_attached () = 
@@ -483,5 +485,5 @@ let () =
               not_attached ()
             else
               regular_page ()
-      )) ;
+      ))
 

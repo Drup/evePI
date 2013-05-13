@@ -3,7 +3,6 @@ open Eliom_lib
 open Eliom_content
 open Eliom_service
 open Eliom_content.Html5
-open Eliom_content.Html5.F
 open Bootstrap
 }}
 
@@ -12,6 +11,12 @@ open Skeleton.Connected
 open Auth
 open EvePI_db
 open Utility
+
+{shared{
+include Wgeneral
+open F
+}}
+
 
 (** {1 Project} *)
 
