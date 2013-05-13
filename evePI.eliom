@@ -360,11 +360,11 @@ let () =
            lwt planets = make_planet_list sort user.id in
            make_page 
              user.id
-             "Eve PI"
+             evepi
              [ center 
 				 [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
 			   ul ~a:[a_class ["section-title"]] [
-				 li ~a:[a_class ["head"]] [pcdata "My planets"] ; 
+				 li [h3 [pcdata "My planets"]] ; 
 				 li ~a:[a_class ["divider"]] [] ;
 				 li [pcdata "Sort by : "] ;
 				 dropdown_sort sort ;
@@ -383,7 +383,7 @@ let () =
           lwt project_form = new_project_form () in
           make_page
             user.id
-            "Eve PI - Projects"
+            ("Eveπ - Projects"
             [ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
               project_form ;
               dl ~a:(classes []) projects_list ;
@@ -398,14 +398,14 @@ let () =
           let not_exist () = 
             make_page
               user.id
-              ("Eve PI - My Projects")
+              ("Eveπ - My Projects")
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_admin () = 
             lwt project_name = QProject.get_name project in
             make_page 
               user.id
-              ("Eve PI - Oups") 
+              ("Eveπ - Oups") 
               [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
                 center [h1 [pcdata "GO AWAY !"]] ] in
           let regular_page () = 
@@ -416,7 +416,7 @@ let () =
 			lwt change_name = change_name_form project in
             make_page
               user.id
-              ("Eve PI - Admin - "^ project_name)
+              ("Eveπ - Admin - "^ project_name)
               [ center [h2 [pcdata "Admin panel for the project : " ; 
                             make_link_member_project (project,project_name) ]] ;
 				add_goal ;
@@ -442,14 +442,14 @@ let () =
           let not_exist () = 
             make_page
               user.id
-              ("Eve PI - My Projects")
+              ("Eveπ - My Projects")
               [ center [h2 [pcdata "This project doesn't exist"]]
               ] in
           let not_attached () = 
             lwt project_name = QProject.get_name project in
             make_page
               user.id
-              ("Eve PI - My Projects - "^ project_name)
+              ("Eveπ - My Projects - "^ project_name)
               [ center [h2 [pcdata "Project : " ; 
                             em [pcdata project_name]]] ;
                 h3 [pcdata "You are not attached to this project " ; 
@@ -468,7 +468,7 @@ let () =
             in
             make_page
               user.id
-              ("Eve PI - My Projects - "^ project_name)
+              ("Eveπ - My Projects - "^ project_name)
               [ center [h2 ([pcdata "Project : " ; 
                              em [pcdata project_name] ; 
                              pcdata " " ] @ admin_link)] ;

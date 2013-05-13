@@ -55,15 +55,16 @@ a.link {
 	max-width: none;
 }
 
-.section-title .head {
+.section-title h1,
+.section-title h2,
+.section-title h3,
+.section-title h4,
+.section-title h5,
+.section-title h6 {
 	display: inline;
 	padding: 0px 5px;
-	font-size: 28px;
-	font-weight: bold;
-	color: rgb(255, 255, 255);
-	text-rendering: optimizelegibility;
-	font-family: inherit;
-	font-weight: normal;
+	margin-bottom: 0px;
+	line-height: 20px;
 }
 
 .section-title .dropdown-menu {
