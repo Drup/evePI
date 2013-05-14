@@ -46,25 +46,22 @@ let new_project_form () =
     let f (id,name) = 
       Option ([],id,Some (pcdata name),true) in
     f (List.hd goals), List.map f (List.tl goals)
-  in					
-  Lwt.return (post_form ~a:(classe "form-inline")
+  in
+  let fun_form (name,(desc,goal)) = 
+	[divcs ["input-prepend";"input-append"] 
+	   [ string_input ~a:[a_placeholder "Name"] 
+		   ~input_type:`Text ~name:name () ;
+		 string_input ~a:[a_placeholder "Description"] 
+		   ~input_type:`Text ~name:desc () ;
+		 int32_select ~name:goal ghd gtl ;
+		 button 
+		   ~a:(classes ["btn"]) 
+		   ~button_type:`Submit [pcdata "Create"] ;
+	   ]] in 
+  Lwt.return (
+	post_form ~a:(classe "form-inline")
 	  ~service:create_project_service
-	  (fun (name,(desc,goal)) -> 
-		 [ h3
-			 [span ~a:(Collapse.a "create_project_form")
-				[pcdata "Create a new project"; icon ~white:true "chevron-down"]] ;
-		   Collapse.div "create_project_form" 
-			 [divcs 
-				["input-prepend";"input-append"] 
-				[ string_input ~a:[a_placeholder "Name"] 
-					~input_type:`Text ~name:name () ;
-				  string_input ~a:[a_placeholder "Description"] 
-					~input_type:`Text ~name:desc () ;
-				  int32_select ~name:goal ghd gtl ;
-				  button 
-					~a:(classes ["btn"]) 
-					~button_type:`Submit [pcdata "Create"] ;
-				]]]) ())
+	  fun_form ())
 
 (* Nouvelle planete *)
 
@@ -125,8 +122,8 @@ let new_planet_form user =
   let form_fun (proj,location) =
     let select_system = 
       D.Raw.input ~a:[a_input_type `Text; 
-                    a_autocomplete `Off;
-                    a_placeholder "Location"] () in
+                      a_autocomplete `Off;
+                      a_placeholder "Location"] () in
     let planet_place = D.span [] in
     let _ = {unit{ 
         select_system_handler 
@@ -143,11 +140,9 @@ let new_planet_form user =
 		]]
   in
   Lwt.return (
-	div 
-	  [ h3 [pcdata "Create a new planet"; icon ~white:true "chevron-down"] ;
-		post_form ~a:(classe "form-inline")
-		  ~service:new_planet_service
-		  form_fun ()])
+	post_form ~a:(classe "form-inline")
+	  ~service:new_planet_service
+	  form_fun ())
 
 let _ =
   action_register
@@ -315,8 +310,18 @@ let make_admin_projects_list user =
   in 
   Lwt.return (ul (List.map aux projects))
 
-(** Le menu *)
+(** Tools to make the usual layout of an evePI page *)
 
+let stitlebar ?(h=h3) title content = 
+  STitle.simple (
+	(li [h title]) ::
+	  content 
+  )
+
+let stitle ?(h=h3) title =
+  div ~a:[a_class ["section-title"]] [h title]
+
+(** Le menu *)
 let menu user =
   let elements =
     [main_service, [pcdata "Home"] ;
@@ -355,135 +360,134 @@ let make_page ?(css=[]) user title body =
 let () =
   Connected.register
     ~service:main_sort_service
-    (fun sort () -> 
-       Lwt.return (
-         fun user ->
-           lwt form = new_planet_form user.id in
-           lwt planets = make_planet_list sort user.id in
-           make_page 
-             user.id
-             evepi
-             [ center 
-				 [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
-			   STitle.(simple [
-				 li [h3 [pcdata "My planets"]] ; 
-				 divider () ;
-				 li [pcdata "Sort by : "] ;
-				 dropdown_sort sort ;
-			   ]) ;
-			   planets ;
-			   form ;
-			 ]
-	   )) ;
+    (silly (fun sort () user ->
+		lwt form = new_planet_form user.id in
+		lwt planets = make_planet_list sort user.id in
+		make_page 
+		  user.id
+		  evepi
+		  [ center 
+			  [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
+			stitlebar [pcdata "My planets"] [
+			  STitle.divider () ;
+			  li [pcdata "Sort by : "] ;
+			  dropdown_sort sort ;
+			] ;
+			planets ;
+			stitle [pcdata "Register a new planet"] ; 
+			form ;
+		  ]
+	  )) ;
 
   Connected.register 
     ~service:project_list_service
-    (fun () () ->
-      Lwt.return (
-        fun user ->
-          lwt projects_list = make_projects_list user.id in
-          lwt project_form = new_project_form () in
-          make_page
-            user.id
-            "Eveπ - Projects"
-            [ center [h2 [pcdata "They want "; em [pcdata "you"] ; pcdata " in those projects !"]] ;
-              project_form ;
-              dl ~a:(classes []) projects_list ;
-            ]
+    (silly (fun () () user ->
+        lwt projects_list = make_projects_list user.id in
+        lwt project_form = new_project_form () in
+        make_page
+          user.id
+          "Eveπ - Projects"
+          [ stitlebar ~h:h3
+			  [pcdata "They want "; 
+			   em [pcdata "you"] ; 
+			   pcdata " in those projects !"]
+			  [ STitle.divider () ; 
+				li [Collapse.a "create_project_form" [pcdata "Create a new project"]]  ]
+			;
+			Collapse.div "create_project_form" [project_form] ;
+            dl ~a:(classes []) projects_list ;
+          ]
       )) ;
 
   Connected.register
     ~service:project_admin_service
-    (fun project () -> 
-      Lwt.return (
-        fun user ->
-          let not_exist () = 
-            make_page
-              user.id
-              "Eveπ - My Projects"
-              [ center [h2 [pcdata "This project doesn't exist"]]
-              ] in
-          let not_admin () = 
-            lwt project_name = QProject.get_name project in
-            make_page 
-              user.id
-              ("Eveπ - Oups") 
-              [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
-                center [h1 [pcdata "GO AWAY !"]] ] in
-          let regular_page () = 
-            lwt project_name = QProject.get_name project in
-            lwt roots_id = QProject.get_roots project in
-            lwt planets = specialize_planet_form project in
-			lwt add_goal = add_goal_form project in 
-			lwt change_name = change_name_form project in
-            make_page
-              user.id
-              ("Eveπ - Admin - "^ project_name)
-              [ center [h2 [pcdata "Admin panel for the project : " ; 
-                            make_link_member_project (project,project_name) ]] ;
-				add_goal ;
-				change_name ;
-                planets ;
-              ] in
-          lwt exist = QProject.exist project in
-          if not exist then 
-            not_exist () 
+    (silly (fun project () user ->
+        let not_exist () = 
+          make_page
+            user.id
+            "Eveπ - My Projects"
+            [ center [h2 [pcdata "This project doesn't exist"]]
+            ] in
+        let not_admin () = 
+          lwt project_name = QProject.get_name project in
+          make_page 
+            user.id
+            ("Eveπ - Oups") 
+            [ center [h2 [pcdata "Hey, you should'nt be here"]] ;
+              center [h1 [pcdata "GO AWAY !"]] ] in
+        let regular_page () = 
+          lwt project_name = QProject.get_name project in
+          lwt roots_id = QProject.get_roots project in
+          lwt planets = specialize_planet_form project in
+		  lwt add_goal = add_goal_form project in 
+		  lwt change_name = change_name_form project in
+          make_page
+            user.id
+            ("Eveπ - Admin - "^ project_name)
+            [ center [h2 [pcdata "Admin panel for the project : " ; 
+                          make_link_member_project (project,project_name) ]] ;
+			  add_goal ;
+			  change_name ;
+              planets ;
+            ] in
+        lwt exist = QProject.exist project in
+        if not exist then 
+          not_exist () 
+        else
+          lwt is_admin = QAdmin.verify project user.id in
+          if not is_admin then
+            not_admin ()
           else
-            lwt is_admin = QAdmin.verify project user.id in
-            if not is_admin then
-              not_admin ()
-            else
-              regular_page ()
+            regular_page ()
       )) ;
 
   Connected.register
     ~service:project_member_coservice
-    (fun project () -> 
-      Lwt.return (
-        fun user ->
-          let not_exist () = 
-            make_page
-              user.id
-              "Eveπ - My Projects"
-              [ center [h2 [pcdata "This project doesn't exist"]]
-              ] in
-          let not_attached () = 
-            lwt project_name = QProject.get_name project in
-            make_page
-              user.id
-              ("Eveπ - My Projects - "^ project_name)
-              [ center [h2 [pcdata "Project : " ; 
-                            em [pcdata project_name]]] ;
-                h3 [pcdata "You are not attached to this project " ; 
-                    join_project_button project
-                   ]
-              ] in
-          let regular_page () =
-            lwt project_name = QProject.get_name project in
-            lwt is_admin = QAdmin.verify project user.id in
-            lwt trees = Qtree.decorate project in
-            let admin_link = 
-              if is_admin then
-                [ a ~service:project_admin_service 
-                    [Badge.important [pcdata "admin panel"]] project ] 
-              else [] 
-            in
-            make_page
-              user.id
-              ("Eveπ - My Projects - "^ project_name)
-              [ center [h2 ([pcdata "Project : " ; 
-                             em [pcdata project_name] ; 
-                             pcdata " " ] @ admin_link)] ;
-                trees ;
-              ] in
-          lwt exist = QProject.exist project in
-          if not exist then 
-            not_exist () 
+    (silly (fun project () user ->
+        let not_exist () = 
+          make_page
+            user.id
+            "Eveπ - My Projects"
+            [ center [h2 [pcdata "This project doesn't exist"]]
+            ] in
+        let not_attached () = 
+          lwt project_name = QProject.get_name project in
+          make_page
+            user.id
+            ("Eveπ - My Projects - "^ project_name)
+            [ center [
+				 h2 [pcdata "Project : " ; 
+					 em [pcdata project_name]] ;
+				 h3 [pcdata "You are not attached to this project " ; 
+					 join_project_button project]
+			   ]
+            ] in
+        let regular_page () =
+          lwt project_name = QProject.get_name project in
+          lwt is_admin = QAdmin.verify project user.id in
+          lwt trees = Qtree.decorate project in
+          let admin_link = 
+            if is_admin then
+              [ a ~service:project_admin_service 
+                  [Badge.important [pcdata "admin panel"]] project ] 
+            else [] 
+          in
+          make_page
+            user.id
+            ("Eveπ - My Projects - "^ project_name)
+            [ center [h2 ([pcdata "Project : " ; 
+                           em [pcdata project_name] ; 
+                           pcdata " " ] @ admin_link)] ;
+              trees ;
+            ] in
+        lwt exist = QProject.exist project in
+        if not exist then 
+          not_exist () 
+        else
+          lwt is_attached = QUser.is_attached project user.id in 
+          if not is_attached then
+            not_attached ()
           else
-            lwt is_attached = QUser.is_attached project user.id in 
-            if not is_attached then
-              not_attached ()
-            else
-              regular_page ()
+            regular_page ()
       ))
 

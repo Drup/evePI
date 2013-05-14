@@ -121,6 +121,10 @@ struct
 	  ( App ) 
 	  ( Connected_translate (Default) (App) )
 
+  (* Stupid piece of code because of fuck*ng monads *)
+  let silly f =
+	(fun a b -> Lwt.return (fun u -> f a b u))
+
   let action_register action =
 	let f = 
 	  wrap_handler 

@@ -19,7 +19,7 @@ h3 [class^="icon-"] {
 	margin-left: 120px ;
 }
 
-a.link {
+.link {
   cursor: pointer;
 }
 
@@ -28,11 +28,12 @@ a.link {
 
 .section-title {
 	display:block ;
+	margin-top: 25px;
 	margin-bottom: 10px;
 	margin-left: 0;
 	list-style: none;
 	*zoom: 1;
-	border-bottom: 1px solid #aaa;
+	border-bottom: 1px solid #999;
 }
 
 .section-title > li {
@@ -79,7 +80,7 @@ a.link {
 }
 
 .section-title .dropdown-toggle .caret {
-  margin-top: 14px;
+  margin-top: 13px;
   border-top-color: #33b5e5;
   border-bottom-color: #33b5e5;
 }

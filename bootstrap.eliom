@@ -161,23 +161,24 @@ let navbar ?(classes=[]) ?head ?(head_classes=[]) menu =
 (** {2 Collasping} *)
 module Collapse = struct
 
-(** Data attribute to make an element toogle colapse another element. Take the id of the element to collapse whithout "#" *)
-let a_collapse id = 
-  [a_user_data "toggle" "collapse" ; a_user_data "target" ("#"^id)]
+  (** Data attribute to make an element toogle colapse another element. Take the id of the element to collapse whithout "#" *)
+  let a_collapse id = 
+	[a_user_data "toggle" "collapse" ; a_user_data "target" ("#"^id)]
 
-(** Button that toogle-collapse the element with the given id *)
-let button ?(a=[]) id content = 
-  button 
-    ~a:(lclasses ["btn"] :: a_collapse id @ a)
-    ~button_type:`Button content
+  (** Button that toogle-collapse the element with the given id *)
+  let button ?(a=[]) id content = 
+	button 
+      ~a:(lclasses ["btn"] :: a_collapse id @ a)
+      ~button_type:`Button content
 
-(** Div to encapsulate the element to collapse *)
-let div ?(a=[]) id content = 
-  div 
-	~a:(a_id id :: lclasse "collapse" :: a)
-	content 
+  (** Div to encapsulate the element to collapse *)
+  let div ?(a=[]) id content = 
+	div 
+	  ~a:(a_id id :: lclasse "collapse" :: a)
+	  content 
 
-let a = a_collapse
+  let a ?(a=[]) id content = 
+	dummy_a ~a:(a_collapse id @ a) content
 end
 
 }}
