@@ -279,22 +279,45 @@ body {
 
 .planet {
 	 display: inline-block;
-	 width: 13px ;
-	 height: 13px ;
-	 padding : 1px ;
-	 margin-top: 1px;
-	 margin-right: 1px;
-	 line-height: 14px;
-	 vertical-align: text-top;
-	 background-image: url("../img/planet.png") ;
+	 width: 20px ;
+	 height: 20px ;
+	 padding : 0px ;
+	 margin: 2px;
+	 vertical-align: top;
 	 background-size: cover;
 	 background-repeat: no-repeat;
-	 background-position: 0      0;
+	 Background-origin: content-box ;
 }
 
+.planet.Gas {
+	background-image: url("../img/gas.png") ;
+}
+.planet.Temperate {
+	background-image: url("../img/temperate.png") ;
+}
+.planet.Storm {
+	background-image: url("../img/storm.png") ;
+}
+.planet.Plasma {
+	background-image: url("../img/plasma.png") ;
+}
+.planet.Lava {
+	background-image: url("../img/lava.png") ;
+}
+.planet.Barren {
+	background-image: url("../img/barren.png") ;
+}
+.planet.Ice {
+	background-image: url("../img/ice.png") ;
+}
+.planet.Shattered {
+	background-image: url("../img/shattered.png") ;
+}
 
 .planet-list {
 	 margin: 0px !important ;
+	 font-size: 16px ;
+	 
 }
 
 .planet-list > .control-label {
