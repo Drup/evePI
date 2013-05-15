@@ -313,6 +313,9 @@ body {
 .planet.Shattered {
 	background-image: url("../img/shattered.png") ;
 }
+.planet.Oceanic {
+	background-image: url("../img/oceanic.png") ;
+}
 
 .planet-list {
 	 margin: 0px !important ;
