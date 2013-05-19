@@ -10,7 +10,7 @@ The tool is written in [Eliom][eliom], a language/framework to program websites 
 I use [Macaque][macaque] for pgsql interfacing in a type-safe way.  
 I also use [Bootstrap][bootstrap] for the website layout.  
 
-You will also need [sqlite][sqlite] et [safepass][safepass]
+You will also need [sqlite][sqlite] and [safepass][safepass]
 
 Install all of this easily with opam : 
 
