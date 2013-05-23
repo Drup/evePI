@@ -89,32 +89,35 @@ let new_planet_service =
 
 {client{
 
-let select_system_handler slist location planet_div select_system =
-  let open Lwt_js_events in
-  let select_system = Html5.To_dom.of_input select_system in
-  let slist = Js.array (Array.of_list (List.map Js.string slist)) in
-  let updater s =
-    let current_system = Js.to_string s in
-    lwt list = 
-      %rpc_get_planets_by_system current_system in
-    let list = List.map 
-        (fun (id,name,typ) -> 
-		   Option ([],id,Some (pcdata (name ^ " ("^typ^")")),true)) list in
-    let head,tail = match list with
-      | [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
-      | hd::tl -> hd,tl in
-    let planet_select = int32_select ~name:location head tail in
-    let _ = Html5.Manip.replaceAllChild planet_div [planet_select] in
-    Lwt.return () in 
-  let updater s = Lwt.ignore_result (updater s) ; s in
-  Lwt.async (fun () -> 
-    Typeahead.apply 
-      ~source:slist  
-      ~items:6
-      ~updater
-      select_system ; 
-    Lwt.return () )
-}}
+   let select_system_handler slist location planet_div select_system =
+	 let open Lwt_js_events in
+	 let select_system = Html5.To_dom.of_input select_system in
+	 let slist = Js.array (Array.of_list (List.map Js.string slist)) in
+	 let updater s =
+       let current_system = Js.to_string s in
+       lwt list = 
+		 %rpc_get_planets_by_system current_system in
+       let list = List.map 
+           (fun (id,name,typ) -> 
+			  Option ([],id,Some (pcdata (name ^ " ("^typ^")")),true)) list in
+       let head,tail = match list with
+		 | [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
+		 | hd::tl -> hd,tl in
+       let planet_select = int32_select ~name:location head tail in
+       let _ = Html5.Manip.replaceAllChild planet_div [planet_select] in
+       Lwt.return () in 
+	 let updater s = Lwt.ignore_result (updater s) ; s in
+	 Lwt.async (fun () -> 
+	   let params = 
+		 Typeahead.parameters 
+		   ~source:slist  
+		   ~items:6
+		   ~updater
+		   ()
+	   in 
+       Typeahead.apply (jQe select_system) params ; 
+       Lwt.return () )
+ }}
 
 let new_planet_form user =
   lwt phead,plist = QProject.fetch_by_user user >|= list_to_select "No project" in
@@ -253,7 +256,7 @@ let make_planet_list_form form_planet nodes project =
     ignore {unit{ 
 		%init_planet 
 			(To_dom.of_input %planet :> Dom_html.eventTarget Js.t) 
-			(opt_map To_dom.of_button %node :> Dom_html.element Js.t option) 
+			(Option.map To_dom.of_button %node :> Dom_html.element Js.t option) 
 	  }} ;
     planet in
   let aux_users (user, planet_list) =

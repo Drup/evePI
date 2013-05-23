@@ -22,6 +22,10 @@ let make_page ?(a=[]) ?(css=[]) ?(js=[]) s bodyl =
     (body bodyl)
 
 
+{client{
+   let jQe e = JQuery.jQuery (Tools.Choice4.i2 e) Js.null
+}}
+
 {shared{
 (** Quelques utilitaires generiques *)
 
@@ -285,17 +289,16 @@ let rec add_user_data aux = function
   | (s,Some x) :: l -> add_user_data 
         (a_user_data s x :: aux) 
         l
-
-let opt_map f = function Some x -> Some (f x) | None -> None 
 }}
 
 {client{
 module Typeahead = struct
 
   open Js
-  module U = Js.Unsafe 
+	  
+  type parameters
 
-  let apply
+  let parameters
       (* The method used to determine if a query matches an item. *)
       ?(matcher : (js_string t -> bool t) option)
       (* Method used to sort autocomplete results. *)
@@ -314,10 +317,10 @@ module Typeahead = struct
       ?(item : #Dom_html.element option)
       (* The minimum character length needed before triggering autocomplete suggestions. default : 1 *)
       ?(minLength : int option)
-      (* The input object *)
-      (i : #Dom_html.inputElement t)
+	  ()
+	: parameters
     =
-    let opt_inject x = opt_map U.inject x in
+    let opt_inject x = Option.map Js.Unsafe.inject x in
     let user_data = 
       [ "matcher", opt_inject matcher ; 
         "sorter", opt_inject sorter ;
@@ -332,15 +335,23 @@ module Typeahead = struct
     let rec make_object obj = function
       | [] -> obj
       | (_, None)::l -> make_object obj l
-      | (s, Some v) :: l -> U.set obj s v ; make_object obj l
+      | (s, Some v) :: l -> Js.Unsafe.set obj s v ; make_object obj l
     in 
-    let obj = make_object (U.obj [| |]) user_data in
-    let data = U.fun_call (U.variable "jQuery") [|U.inject i|] in
-    ignore (U.meth_call data "typeahead" [| U.inject obj|] )
+    make_object (Js.Unsafe.obj [| |]) user_data
 
+  class type aspect =
+	object inherit JQuery.jQuery 
+	  method typeahead : parameters -> unit meth
+	end
+
+  let apply 
+      (* The input object *)
+      (jq : JQuery.jQuery t)
+	  (* Typeahead parameters *)
+	  (obj : parameters) = 
+	(Js.Unsafe.coerce jq : aspect t)##typeahead(obj)
 
 end
-
 }}
 
 {shared{
@@ -418,11 +429,11 @@ module Popover = struct
 	  ?(container : js_string t option)
       (e : #Dom_html.element t)
 	=
-    let opt_inject x = opt_map U.inject x in
-	let placement = opt_map (fun x -> U.inject (js_position x)) placement in
-	let trigger =  opt_map (fun x -> U.inject (js_trigger x)) trigger in
-	let title = opt_map (fun x -> U.inject x##innerHTML) title in 
-	let content = opt_map (fun x -> U.inject x##innerHTML) content in 
+    let opt_inject x = Option.map U.inject x in
+	let placement = Option.map (fun x -> U.inject (js_position x)) placement in
+	let trigger =  Option.map (fun x -> U.inject (js_trigger x)) trigger in
+	let title = Option.map (fun x -> U.inject x##innerHTML) title in 
+	let content = Option.map (fun x -> U.inject x##innerHTML) content in 
     let user_data = 
       [ "html", opt_inject html ;
 		"animation", opt_inject animation ; 
@@ -440,24 +451,20 @@ module Popover = struct
       | (s, Some v) :: l -> U.set obj s v ; make_object obj l
     in 
     let obj = make_object (U.obj [| |]) user_data in
-    let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in
-    ignore (U.meth_call data "popover" [| U.inject obj|] )
+    ignore (U.meth_call (jQe e) "popover" [| U.inject obj|] )
 
   let show (e: #Dom_html.element t) = 
 	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
 	ignore (U.meth_call data "popover" [| U.inject (string "show")|])
 
   let hide (e: #Dom_html.element t) = 
-	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	ignore (U.meth_call data "popover" [| U.inject (string "hide")|])
+    ignore (U.meth_call (jQe e) "popover" [| U.inject (string "hide")|])
 
   let toogle (e: #Dom_html.element t) = 
-	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	ignore (U.meth_call data "popover" [| U.inject (string "toogle")|])
+    ignore (U.meth_call (jQe e) "popover" [| U.inject (string "toogle")|])
 
   let destroy (e: #Dom_html.element t) = 
-	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	ignore (U.meth_call data "popover" [| U.inject (string "destroy")|])
+    ignore (U.meth_call (jQe e) "popover" [| U.inject (string "destroy")|])
 
 end
 }}
@@ -546,10 +553,9 @@ module Tooltip = struct
 	  ?(tipClass : js_string t option)
       e
 	=
-	let e = string e in 
-    let opt_inject x = opt_map U.inject x in
-	let position = opt_map (fun x -> U.inject (js_pos x)) position in
-	let offset = opt_map (fun (x,y) -> U.inject (array [| x ; y |])) offset in
+    let opt_inject x = Option.map U.inject x in
+	let position = Option.map (fun x -> U.inject (js_pos x)) position in
+	let offset = Option.map (fun (x,y) -> U.inject (array [| x ; y |])) offset in
     let user_data = 
       [ "cancelDefault", opt_inject cancelDefault ;
 		"effect", opt_inject effect ;
@@ -568,19 +574,18 @@ module Tooltip = struct
       | (s, Some v) :: l -> U.set obj s v ; make_object obj l
     in 
     let obj = make_object (U.obj [| |]) user_data in
-    let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in
-    ignore (U.meth_call data "tooltip" [| U.inject obj|] )
-	  
+    ignore (U.meth_call (JQuery.jQ e) "tooltip" [| U.inject obj|] )
+
+	  (* for now, that doesn't work ! *)	  
   let show (e: #Dom_html.element t) = 
 	Eliom_lib.debug "show !" ;
-	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	let api = U.meth_call data "data" [| U.inject (string "tooltip") |] in 
+ let api = U.meth_call (jQe e) "data" [| U.inject (string "tooltip") |] in 
 	ignore (U.meth_call api "show" [| |])
 
+  (* this neither ! *)
   let hide (e: #Dom_html.element t) = 
 	Eliom_lib.debug "hide !" ;
-	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	let api = U.meth_call data "data" [| U.inject (string "tooltip") |] in 
+ let api = U.meth_call (jQe e) "data" [| U.inject (string "tooltip") |] in 
 	ignore (U.meth_call api "hide" [| |])
 
 
