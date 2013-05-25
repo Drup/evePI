@@ -471,7 +471,7 @@ let () =
           lwt roots_id = QProject.get_roots project in
           lwt planets = specialize_planet_form project in
 		  lwt add_goal = add_goal_form project in 
-		  lwt change_name = change_name_form project in
+		  lwt change_name = change_name_form ~current:project_name project in
           make_page
             user.id
             ("Eveπ - Admin panel - Project : "^ project_name)

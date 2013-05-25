@@ -125,11 +125,11 @@ let change_name_service =
   Eliom_service.post_coservice'
 	~post_params:Eliom_parameter.(int64 "project" ** string "name") ()
 
-let change_name_form project_id = 
+let change_name_form ?current project_id = 
   let form_fun (project_form,name_form) = 
 	[ divc "input-append"
-		[ string_input ~a:[a_placeholder "New name"] 
-			~input_type:`Text ~name:name_form () ;
+		[ string_input ~a:[a_placeholder "Enter a new name"; a_required `Required] 
+			~input_type:`Text ?value:current ~name:name_form () ;
 		  int64_button 
 			~a:(classes ["btn"])
 			~name:project_form
@@ -144,12 +144,13 @@ let change_name_form project_id =
 	  form_fun ()
   )
 
+
 let _ = 
   action_with_redir_register 
     ~service:change_name_service
     (fun admin () (project_id,name) -> 
 	   lwt is_admin = QAdmin.verify project_id admin.id in
-	   if is_admin then
+	   if is_admin && name <> "" then
          lwt _ = QProject.update_name project_id name in
          Lwt.return ()
 	   else 
