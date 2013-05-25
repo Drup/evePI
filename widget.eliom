@@ -241,9 +241,8 @@ module PopActions = struct
    
 end
 
-let get_init_planet trig tip = 
-  let module H = HoverGroup (PopActions) in
-  H.get_init trig tip
+let get_init_planet = 
+  hovergroup_get_init (module PopActions) 
 }}
 
 {shared{

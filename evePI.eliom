@@ -234,9 +234,8 @@ module LightActions = struct
 
 end
 
-let get_init_planet = 
-  let module H = HoverGroup (LightActions) in
-  H.get_init
+let get_init_planet () = 
+  hovergroup_get_init (module LightActions)
 }}		 
 
 {shared{
@@ -400,12 +399,64 @@ let () =
       )) ;
 
   Connected.register
+    ~service:project_member_coservice
+    (silly (fun project () user ->
+        let not_exist () = 
+          make_page
+            user.id
+            "Eveπ"
+            [ center [h2 [pcdata "This project doesn't exist"]]
+            ] in
+        let not_attached () = 
+          lwt project_name = QProject.get_name project in
+          make_page
+            user.id
+            ("Eveπ - Project : "^ project_name)
+            [ center [
+				 h2 [pcdata "Project : " ; 
+					 em [pcdata project_name]] ;
+				 h3 [pcdata "You are not attached to this project " ; 
+					 join_project_button project]
+			   ]
+            ] in
+        let regular_page () =
+          lwt project_name = QProject.get_name project in
+          lwt is_admin = QAdmin.verify project user.id in
+          lwt trees = Qtree.decorate project in
+          let admin_link = 
+            if is_admin then
+              [ STitle.divider () ;
+				li [a ~service:project_admin_service 
+					  [pcdata "go to the admin panel"] project ]]
+            else [] 
+          in
+          make_page
+            user.id
+            ("Eveπ - Project : "^ project_name)
+            [ stitlebar ~h:h3
+				[pcdata "Project : "; 
+				 make_link_member_project (project,project_name) ]
+				admin_link ;
+              trees ;
+            ] in
+        lwt exist = QProject.exist project in
+        if not exist then 
+          not_exist () 
+        else
+          lwt is_attached = QUser.is_attached project user.id in 
+          if not is_attached then
+            not_attached ()
+          else
+            regular_page ()
+      )) ;
+
+  Connected.register
     ~service:project_admin_service
     (silly (fun project () user ->
         let not_exist () = 
           make_page
             user.id
-            "Eveπ - My Projects"
+            "Eveπ"
             [ center [h2 [pcdata "This project doesn't exist"]]
             ] in
         let not_admin () = 
@@ -423,10 +474,14 @@ let () =
 		  lwt change_name = change_name_form project in
           make_page
             user.id
-            ("Eveπ - Admin - "^ project_name)
-            [ center [h2 [pcdata "Admin panel for the project : " ; 
-                          make_link_member_project (project,project_name) ]] ;
-			  add_goal ;
+            ("Eveπ - Admin panel - Project : "^ project_name)
+            [ stitlebar ~h:h3
+				[pcdata "Admin panel - Project : "; 
+				 make_link_member_project (project,project_name) ]
+				[ STitle.divider () ; 
+				  li [Collapse.a "add_goal_form" [pcdata "Add a new goal"]]  ]
+			  ;
+			  Collapse.div "add_goal_form" [add_goal] ;
 			  change_name ;
               planets ;
             ] in
@@ -439,55 +494,5 @@ let () =
             not_admin ()
           else
             regular_page ()
-      )) ;
-
-  Connected.register
-    ~service:project_member_coservice
-    (silly (fun project () user ->
-        let not_exist () = 
-          make_page
-            user.id
-            "Eveπ - My Projects"
-            [ center [h2 [pcdata "This project doesn't exist"]]
-            ] in
-        let not_attached () = 
-          lwt project_name = QProject.get_name project in
-          make_page
-            user.id
-            ("Eveπ - My Projects - "^ project_name)
-            [ center [
-				 h2 [pcdata "Project : " ; 
-					 em [pcdata project_name]] ;
-				 h3 [pcdata "You are not attached to this project " ; 
-					 join_project_button project]
-			   ]
-            ] in
-        let regular_page () =
-          lwt project_name = QProject.get_name project in
-          lwt is_admin = QAdmin.verify project user.id in
-          lwt trees = Qtree.decorate project in
-          let admin_link = 
-            if is_admin then
-              [ a ~service:project_admin_service 
-                  [Badge.important [pcdata "admin panel"]] project ] 
-            else [] 
-          in
-          make_page
-            user.id
-            ("Eveπ - My Projects - "^ project_name)
-            [ center [h2 ([pcdata "Project : " ; 
-                           em [pcdata project_name] ; 
-                           pcdata " " ] @ admin_link)] ;
-              trees ;
-            ] in
-        lwt exist = QProject.exist project in
-        if not exist then 
-          not_exist () 
-        else
-          lwt is_attached = QUser.is_attached project user.id in 
-          if not is_attached then
-            not_attached ()
-          else
-            regular_page ()
-      ))
+      )) 
 
