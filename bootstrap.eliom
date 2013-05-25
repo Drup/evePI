@@ -346,7 +346,7 @@ module Typeahead = struct
 
   let apply 
       (* The input object *)
-      (jq : JQuery.jQuery t)
+      (jq : #JQuery.jQuery t)
 	  (* Typeahead parameters *)
 	  (obj : parameters) = 
 	(Js.Unsafe.coerce jq : aspect t)##typeahead(obj)
@@ -417,7 +417,9 @@ module Popover = struct
 	  | Focus -> focus
 	  | Manual -> manual
 
-  let apply
+  type parameters
+  
+  let parameters
 	  ?(html : bool t option)
 	  ?(animation : bool t option)
 	  ?placement
@@ -427,7 +429,8 @@ module Popover = struct
 	  ?(content : #Dom_html.element t option)
 	  ?(delay : float t option)
 	  ?(container : js_string t option)
-      (e : #Dom_html.element t)
+	  ()
+	: parameters
 	=
     let opt_inject x = Option.map U.inject x in
 	let placement = Option.map (fun x -> U.inject (js_position x)) placement in
@@ -450,21 +453,30 @@ module Popover = struct
       | (_, None)::l -> make_object obj l
       | (s, Some v) :: l -> U.set obj s v ; make_object obj l
     in 
-    let obj = make_object (U.obj [| |]) user_data in
-    ignore (U.meth_call (jQe e) "popover" [| U.inject obj|] )
+    make_object (U.obj [| |]) user_data
 
-  let show (e: #Dom_html.element t) = 
-	let data = U.fun_call (U.variable "jQuery") [|U.inject e|] in 
-	ignore (U.meth_call data "popover" [| U.inject (string "show")|])
+  class type aspect =
+	object inherit JQuery.jQuery 
+	  method popover : parameters -> unit meth
+	end
 
-  let hide (e: #Dom_html.element t) = 
-    ignore (U.meth_call (jQe e) "popover" [| U.inject (string "hide")|])
+  let apply 
+      (* The input object *)
+      (jq : #JQuery.jQuery t)
+	  (* Typeahead parameters *)
+	  (obj : parameters) = 
+	(Js.Unsafe.coerce jq : aspect t)##popover(obj)
 
-  let toogle (e: #Dom_html.element t) = 
-    ignore (U.meth_call (jQe e) "popover" [| U.inject (string "toogle")|])
+  let call (jq : #JQuery.jQuery t) s =
+	(Js.Unsafe.coerce jq : < popover : js_string t -> unit meth > t)##popover(string s)
 
-  let destroy (e: #Dom_html.element t) = 
-    ignore (U.meth_call (jQe e) "popover" [| U.inject (string "destroy")|])
+  let show jq s = call jq "show" 
+
+  let hide jq s = call jq "hide" 
+
+  let toogle jq s = call jq "toogle" 
+
+  let destroy jq s = call jq "destroy" 
 
 end
 }}
