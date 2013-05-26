@@ -1,4 +1,6 @@
-
+* { 
+	font-family: 'Droid Sans',sans-serif;
+}
 
 /* Fixing bootstrap */
 h3 [class^="icon-"] {
@@ -255,7 +257,6 @@ h3 [class^="icon-"] {
 .planettip i {
 	margin-left: 5px ;
 }
-
 
 /* Generic styling */
 

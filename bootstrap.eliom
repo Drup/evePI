@@ -52,9 +52,13 @@ let dummy_a ?(a=[]) content =
 (** Des éléments bootstrap *)
 
 (** Icons *)
-let icon ?(white=false) s = 
+let icon ?(a=[]) ?(white=false) s = 
   let style = if white then ["icon-white"] else [] in 
-  i ~a:(classes (("icon-"^s) :: style)) []
+  i ~a:(a_class (("icon-"^s) :: style) :: a) []
+
+let d_icon ?(a=[]) ?(white=false) s = 
+  let style = if white then ["icon-white"] else [] in 
+  i ~a:(a_class (("icon-"^s) :: style) :: a) []
 
 (** Caret *)
 let caret = 

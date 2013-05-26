@@ -471,18 +471,19 @@ let () =
           lwt roots_id = QProject.get_roots project in
           lwt planets = specialize_planet_form project in
 		  lwt add_goal = add_goal_form project in 
-		  lwt change_name = change_name_form ~current:project_name project in
+		  let link_project = make_link_member_project (project,project_name) in 
+		  let editable_name = editable_name 
+			  ~default_name:project_name link_project change_name_service project in 
           make_page
             user.id
             ("Eveπ - Admin panel - Project : "^ project_name)
             [ stitlebar ~h:h3
 				[pcdata "Admin panel - Project : "; 
-				 make_link_member_project (project,project_name) ]
+				 editable_name ]
 				[ STitle.divider () ; 
 				  li [Collapse.a "add_goal_form" [pcdata "Add a new goal"]]  ]
 			  ;
 			  Collapse.div "add_goal_form" [add_goal] ;
-			  change_name ;
               planets ;
             ] in
         lwt exist = QProject.exist project in

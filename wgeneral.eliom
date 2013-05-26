@@ -5,7 +5,6 @@ open Eliom_service
 open Eliom_content.Html5
 }}
 
-open Utility
 
 (** {1 Generals widgets} *)
 (** Regroup some widgets not specific to evePI *)
@@ -96,6 +95,50 @@ let hovergroup_get_init
   in 
   init_trigger
 
+}}
+
+(** {2 Replacer} 
+	Replace A by B when C *)
+
+{client{
+module Replacer = struct
+
+  open Lwt_js_events
+
+  let oneshot container replacement event trigger = 
+	Lwt.async 
+	  (fun () -> 
+		 event trigger >>= (fun _ -> 
+		   Lwt.return (Html5.Manip.replaceAllChild container replacement)
+		 ))
+
+  let multishot container replacement event trigger = 
+	Lwt.async 
+	  (fun () -> 
+		 event trigger (fun _ _ -> 
+		   Lwt.return (Html5.Manip.replaceAllChild container replacement)
+		 ))
+
+  let toogle container original replacement event1 event2 trigger =
+	Lwt.async (fun () -> 
+	  event1 trigger (fun _ _ -> (
+		debug "bla" ; Html5.Manip.replaceAllChild container replacement ;
+		lwt _ = Lwt_js.sleep 0.1 in 
+		(event2 trigger  >>= (fun _ -> 
+		  Html5.Manip.replaceAllChild container original ;
+		  Lwt.return ())))
+	  ))
+
+   let click_oneshot container replacement trigger = 
+	 oneshot container replacement click trigger
+
+   let click_multishot container replacement trigger = 
+	 multishot container replacement clicks trigger
+
+   let click_toogle container original replacement trigger = 
+	 toogle container original replacement clicks click trigger	 
+
+end
 }}
 
 
