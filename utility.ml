@@ -30,6 +30,10 @@ let opt_list = function
   | Some x -> x
   | None -> []
 
+(* Stupid piece of code because of fuck*ng monads *)
+let silly f = fun a b -> Lwt.return (fun u -> f a b u)
+
+
 (** List related *)
 
 (* Group an 'a * 'b list according to the 'a field. 

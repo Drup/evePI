@@ -1,7 +1,5 @@
 {shared{
 open Eliom_lib
-open Eliom_content
-open Eliom_service
 open Eliom_content.Html5
 
 open Widget
@@ -12,7 +10,6 @@ open Bootstrap
 
 open Auth
 open Skeleton
-open Skeleton.Connected
 open EvePI_db
 open Utility
 
@@ -27,7 +24,7 @@ let create_project_service =
 		  int32 "goal") ()
 
 let _ = 
-  action_with_redir_register 
+  Wrap.action_with_redir_register 
     ~redir:project_list_service
     ~service:create_project_service
     (fun admin () (project,(desc,goal)) -> (
@@ -91,7 +88,7 @@ let new_planet_service =
 
 let select_system_handler slist location planet_div select_system =
   let open Lwt_js_events in
-  let select_system = Html5.To_dom.of_input select_system in
+  let select_system = To_dom.of_input select_system in
   let slist = Js.array (Array.of_list (List.map Js.string slist)) in
   let updater s =
     let current_system = Js.to_string s in
@@ -104,7 +101,7 @@ let select_system_handler slist location planet_div select_system =
       | [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
       | hd::tl -> hd,tl in
     let planet_select = int32_select ~name:location head tail in
-    let _ = Html5.Manip.replaceAllChild planet_div [planet_select] in
+    let _ = Manip.replaceAllChild planet_div [planet_select] in
     Lwt.return () in 
   let updater s = Lwt.ignore_result (updater s) ; s in
   Lwt.async (fun () -> 
@@ -145,7 +142,7 @@ let new_planet_form user =
 	  form_fun ())
 
 let _ =
-  action_register
+  Wrap.action_register
     ~service:new_planet_service
     (fun user () (project,location) -> (
         lwt _ = QPlanet.create ?project user.id location in
@@ -171,7 +168,7 @@ let attach_planet_form user planet =
       ]) ())
 
 let _ =
-  action_register
+  Wrap.action_register
     ~service:attach_planet_service
     (fun user () (planet,project) -> (
         lwt _ = QPlanet.update_project planet project in
@@ -283,7 +280,7 @@ let specialize_planet_form project =
     form_fun ()
 
 let _ =
-  action_register
+  Wrap.action_register
     ~service:specialize_planet_service
     (fun user () (planet,product) -> (
         match planet with

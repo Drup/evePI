@@ -124,36 +124,37 @@ struct
 	  ( App ) 
 	  ( Connected_translate (Default) (App) )
 
-  (* Stupid piece of code because of fuck*ng monads *)
-  let silly f =
-	(fun a b -> Lwt.return (fun u -> f a b u))
+  (** Allow to wrap services *)
+  module Wrap = struct
 
-  let action_register action =
-	let f = 
-	  wrap_handler 
-		(fun () -> Eliom_reference.get user)
-		(fun _ _ -> Lwt.return ())
-		action
-	in
-	Eliom_registration.Action.register f
+	let action_register action =
+	  let f = 
+		wrap_handler 
+		  (fun () -> Eliom_reference.get user)
+		  (fun _ _ -> Lwt.return ())
+		  action
+	  in
+	  Eliom_registration.Action.register f
 
-  let action_with_redir_register ?(redir=Eliom_service.void_coservice') action =
-	let f = 
-	  wrap_handler 
-		(fun () -> Eliom_reference.get user)
-		(fun _ _ -> App.send (Default.v ()))
-		(fun u g p -> 
-		   lwt _ = action u g p in 
-		   Eliom_registration.Redirection.send redir)
-	in
-	Eliom_registration.Any.register f
+	let action_with_redir_register ?(redir=Eliom_service.void_coservice') action =
+	  let f = 
+		wrap_handler 
+		  (fun () -> Eliom_reference.get user)
+		  (fun _ _ -> App.send (Default.v ()))
+		  (fun u g p -> 
+			 lwt _ = action u g p in 
+			 Eliom_registration.Redirection.send redir)
+	  in
+	  Eliom_registration.Any.register f
 
-  let unit_register action = 
-	let f = 
-	  wrap_handler 
-		(fun () -> Eliom_reference.get user)
-		(fun _ _ -> Lwt.return ())
-		action
-	in Eliom_registration.Unit.register f
+	let unit_register action = 
+	  let f = 
+		wrap_handler 
+		  (fun () -> Eliom_reference.get user)
+		  (fun _ _ -> Lwt.return ())
+		  action
+	  in Eliom_registration.Unit.register f
+  
+  end
 
 end

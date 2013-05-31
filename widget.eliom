@@ -1,13 +1,10 @@
 {shared{
 open Eliom_lib
-open Eliom_content
-open Eliom_service
 open Eliom_content.Html5
 open Bootstrap
 }}
 
 open Skeleton
-open Skeleton.Connected
 open Auth
 open EvePI_db
 open Utility
@@ -37,7 +34,7 @@ let join_project_button project_id =
     [pcdata "Join now !"]
 
 let _ =
-  action_register
+  Wrap.action_register
     ~service:join_project_service
     (fun user () project -> (
         lwt _ = QUser.attach project user.id in
@@ -102,7 +99,7 @@ let add_goal_form project_id =
   )
 
 let _ = 
-  action_with_redir_register 
+  Wrap.action_with_redir_register 
     ~service:add_goal_service
     (fun admin () (project_id,goal) -> 
 	   lwt is_admin = QAdmin.verify project_id admin.id in
@@ -122,7 +119,7 @@ let change_name_service =
 	~post_params:Eliom_parameter.(int64 "project" ** string "name") ()
 
 let _ = 
-  action_with_redir_register 
+  Wrap.action_with_redir_register 
     ~service:change_name_service
     (fun admin () (project_id,name) -> 
 	   lwt is_admin = QAdmin.verify project_id admin.id in
@@ -156,13 +153,13 @@ let editable_name ?(default_name="New name") content service id =
 	  let trigger = %trigger in
 	  let replacement = [fake_input; confirm; cancel] in 
 	  let _ = Replacer.click_multishot container replacement
-		  (Html5.To_dom.of_a trigger) in
+		  (To_dom.of_a trigger) in
 	  let _ = Replacer.click_multishot container [original;trigger]
-		  (Html5.To_dom.of_a cancel) in 
+		  (To_dom.of_a cancel) in 
 	  Lwt.async (fun () -> 
 		let open Lwt_js_events in 
-		click (Html5.To_dom.of_a confirm) >>= (fun _ ->
-		  let new_name = Js.to_string (Html5.To_dom.of_span fake_input)##innerHTML in 
+		click (To_dom.of_a confirm) >>= (fun _ ->
+		  let new_name = Js.to_string (To_dom.of_span fake_input)##innerHTML in 
 		  Eliom_client.change_page ~service:%service () (%id,new_name)
 		))
 	}} in 
@@ -189,7 +186,7 @@ let delete_planet_link planet =
 	[icon ~white:true "remove"]
 
 let _ = 
-  action_register
+  Wrap.action_register
 	~service:delete_planet_service
 	(fun user () planet -> 
 	   lwt is_user = QPlanet.is_attached planet user.id in 
@@ -216,7 +213,7 @@ let change_project_link planet (project_id,project_name) =
 	[pcdata project_name]
 
 let _ = 
-  action_register
+  Wrap.action_register
 	~service:change_project_service
 	(fun user () (planet,project) -> 
 	   lwt is_user = QPlanet.is_attached planet user.id in 
@@ -324,7 +321,7 @@ let make_planet_list_by_loc user_id =
   in
   let format_group x = [pcdata x] in
   let format_info (planet_id,proj,all_proj,prod,note) = 
-	let open Html5.D in
+	let open D in
 	let all_proj = 
 	  li ~a:[a_class ["disabled"]] [Raw.a [pcdata "Change project"]] ::
 		List.map (fun x -> li [change_project_link planet_id x]) all_proj in
@@ -367,7 +364,7 @@ let make_planet_list_by_project user_id =
 	| Some p -> [member_project_link p] 
   in 
   let format_info (planet_id,proj,all_proj,prod,note) = 
-	let open Html5.D in
+	let open D in
 	let all_proj = 
 	  li ~a:[a_class ["disabled"]] [Raw.a [pcdata "Change project"]] ::
 		List.map (fun x -> li [change_project_link planet_id x]) all_proj in

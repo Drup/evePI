@@ -1,9 +1,6 @@
 (** This file give the basic organization of eveπ. *)
 
-open Eliom_lib
-open Eliom_content
-open Eliom_service
-open Eliom_content.Html5.D
+open Eliom_content.Html5.F
 
 open Bootstrap
 open Auth
@@ -41,7 +38,7 @@ let default_content () =
       ]]
 
 module Connected = Connected (struct let v = default_content end) (App)
-open Connected
+module Wrap = Connected.Wrap
 
 (** Projects list *)
 let project_list_service =
