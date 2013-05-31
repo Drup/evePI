@@ -363,7 +363,7 @@ let () =
   Connected.register 
     ~service:project_list_service
     (silly (fun () () user ->
-        lwt projects_list = make_projects_list user.id in
+        lwt projects_list = Wproject.make_list user.id in
         lwt project_form = new_project_form () in
         make_page
           user.id
@@ -398,7 +398,7 @@ let () =
 				 h2 [pcdata "Project : " ; 
 					 em [pcdata project_name]] ;
 				 h3 [pcdata "You are not attached to this project " ; 
-					 join_project_button project]
+					 Wproject.join_btn project]
 			   ]
             ] in
         let regular_page () =
@@ -452,10 +452,11 @@ let () =
           lwt project_name = QProject.get_name project in
           lwt roots_id = QProject.get_roots project in
           lwt planets = specialize_planet_form project in
-		  lwt add_goal = add_goal_form project in 
+		  lwt add_goal = Wproject.add_goal_form project in 
 		  let link_project = member_project_link (project,project_name) in 
 		  let editable_name = editable_name 
-			  ~default_name:project_name link_project change_name_service project in 
+			  ~default_name:project_name link_project 
+			  Wproject.change_name_service project in 
           make_page
             user.id
             ("Eveπ - Admin panel - Project : "^ project_name)

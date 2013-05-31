@@ -1,6 +1,7 @@
 {shared{
 open Eliom_lib
 open Eliom_content.Html5
+open F
 }}
 
 
@@ -138,6 +139,42 @@ module Replacer = struct
 
 end
 }}
+
+
+(* TODO bind the enter key to "send" *)
+let editable_name ?(default_name="New name") content service id = 
+  let fake_input = 
+	(* FIXME a_contenteditable is bugged in Tyxml, fix this when this is resolved !!!!! *)
+	(* D.span ~a:[a_contenteditable `True] *)
+	D.span ~a:[to_attrib (Xml.string_attrib "contenteditable" "true") ]
+	  [pcdata default_name] in
+  let btn_icon title icon_name = 
+	D.Raw.a ~a:[ a_title title ; a_class ["link"] ]
+	  [Bootstrap.icon ~white:true icon_name] in 
+  let trigger = btn_icon "Edit name" "pencil" in 
+  let confirm = btn_icon "Change name" "ok" in 
+  let cancel = btn_icon "Cancel" "remove" in 
+  let container = D.span ~a:[a_class ["name-input"]] [ content ; trigger ] in
+  let _  = {unit{
+	  let container = %container in 
+	  let original = %content in 
+	  let cancel = %cancel in 
+	  let confirm = %confirm in 
+	  let fake_input = %fake_input in 
+	  let trigger = %trigger in
+	  let replacement = [fake_input; confirm; cancel] in 
+	  let _ = Replacer.click_multishot container replacement
+		  (To_dom.of_a trigger) in
+	  let _ = Replacer.click_multishot container [original;trigger]
+		  (To_dom.of_a cancel) in 
+	  Lwt.async (fun () -> 
+		let open Lwt_js_events in 
+		click (To_dom.of_a confirm) >>= (fun _ ->
+		  let new_name = Js.to_string (To_dom.of_span fake_input)##innerHTML in 
+		  Eliom_client.change_page ~service:%service () (%id,new_name)
+		))
+	}} in 
+  container 
 
 
 (** Let's package everything into F and D modules *)
