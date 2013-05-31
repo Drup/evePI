@@ -4,6 +4,8 @@ open Eliom_content.Html5.D
 
 open Utility
 
+(** This module implements some regular tree manipulations *)
+
 type 'a tree = Node of 'a * ('a tree list) | Leaf of 'a
 
 let rec make get_sons t =
@@ -46,6 +48,7 @@ let printf_plain =
   let f name = [div ~a:[a_class ["tree"]]  [pcdata name]] in
   printf f
 
+(** The same operations than in { ! Tree } in the Lwt monad *)
 module Lwt = 
 struct 
 

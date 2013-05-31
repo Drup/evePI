@@ -6,7 +6,7 @@ open Utility
 open EvePI_db
 
 
-(** Decorate a tree according to various information 
+(** Decorates a tree according to various informations.
 	Used in the project_page *)
 
 let decorate_node (id,typeid,notes) = 
