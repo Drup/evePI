@@ -1,5 +1,4 @@
 open Eliom_lib
-open Eliom_content
 open Eve_db.SDD
 
 open Utility

@@ -12,7 +12,6 @@
 
 
 open Eliom_lib
-open Eliom_content
 
 open Utility
 open Eve_db.PI

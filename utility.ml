@@ -39,6 +39,5 @@ let list_grouping_sort l =
 
 (** Hshtbl *)
 
-let hashtbl_find tbl = function
-  | Some id -> Some (Hashtbl.find tbl id)
-  | None -> None 
+(* Doesn't compile without Eliom_lib, bug ? FIXME *)
+let hashtbl_find tbl = Eliom_lib.Option.map (Hashtbl.find tbl)

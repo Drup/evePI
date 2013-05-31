@@ -1,12 +1,9 @@
 (** This file describes the handling of users *)
 
-
 open Eliom_lib
-open Eliom_content
-open Eliom_service
 open Eliom_tools
 open Eliom_content.Html5
-open Eliom_content.Html5.D
+open F
 
 open EvePI_db
 open Bootstrap

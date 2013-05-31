@@ -1,7 +1,5 @@
 {shared{
 open Eliom_lib
-open Eliom_content
-open Eliom_service
 open Eliom_content.Html5
 }}
 
@@ -109,23 +107,23 @@ module Replacer = struct
 	Lwt.async 
 	  (fun () -> 
 		 event trigger >>= (fun _ -> 
-		   Lwt.return (Html5.Manip.replaceAllChild container replacement)
+		   Lwt.return (Manip.replaceAllChild container replacement)
 		 ))
 
   let multishot container replacement event trigger = 
 	Lwt.async 
 	  (fun () -> 
 		 event trigger (fun _ _ -> 
-		   Lwt.return (Html5.Manip.replaceAllChild container replacement)
+		   Lwt.return (Manip.replaceAllChild container replacement)
 		 ))
 
   let toogle container original replacement event1 event2 trigger =
 	Lwt.async (fun () -> 
 	  event1 trigger (fun _ _ -> (
-		debug "bla" ; Html5.Manip.replaceAllChild container replacement ;
+		debug "bla" ; Manip.replaceAllChild container replacement ;
 		lwt _ = Lwt_js.sleep 0.1 in 
 		(event2 trigger  >>= (fun _ -> 
-		  Html5.Manip.replaceAllChild container original ;
+		  Manip.replaceAllChild container original ;
 		  Lwt.return ())))
 	  ))
 
