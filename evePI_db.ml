@@ -162,7 +162,7 @@ let get_name project_id =
 (** Take an existing tree and add it to the {! projects_tree} table *)
 let fill_tree project tree = 
   let new_node parent typeid = 
-	let parent = opt_map (fun p -> <:value< $int64:p$ >>) parent in
+	let parent = Option.map (fun p -> <:value< $int64:p$ >>) parent in
 	lwt _ = query 
 		<:insert< $projects_tree$ := {
 				 project_id = $int64:project$ ;
@@ -200,7 +200,7 @@ let get_roots project =
 		node.project_id = $int64:project$ ;
 		is_null node.parent_id 
 		>>)
-  >|= List.map (fun r -> r#!id, r#!typeid, opt_string r#?note)
+   >|= List.map (fun r -> r#!id, r#!typeid, Option.default "" r#?note)
 		  
 
 let get_sons pID = 
@@ -211,7 +211,7 @@ let get_sons pID =
 		node_info.id = node.product_id ;
 		node.parent_id = $int64:pID$
 		>>)
-  >|= List.map (fun r -> r#!id,r#!typeid, opt_string r#?note)
+  >|= List.map (fun r -> r#!id,r#!typeid, Option.default "" r#?note)
 
 end
 	 
@@ -230,9 +230,9 @@ let get_typeid product_id =
 module QPlanet = struct 
 
 let create ?prod ?note ?project user location =
-  let project = opt_map (fun p -> <:value< $int64:p$ >>) project in
-  let prod = opt_map (fun p -> <:value< $int64:p$ >>) prod in
-  let note = opt_map (fun n -> <:value< $string:n$ >>) note in
+  let project = Option.map (fun p -> <:value< $int64:p$ >>) project in
+  let prod = Option.map (fun p -> <:value< $int64:p$ >>) prod in
+  let note = Option.map (fun n -> <:value< $string:n$ >>) note in
   query
 	 <:insert< $planets$ := {
 	  id = planets?id ;

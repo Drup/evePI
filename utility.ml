@@ -1,34 +1,23 @@
 (* This file regroups all general and utility piece of code used in the project *)
 
-(** Opt related *)
+(** 'a option related stuff. Extend {! Eliom_lib.Option} *)
+module Option = struct
+  include Eliom_lib.Option 
 
-let opt_map f = function
-  | None -> None 
-  | Some s -> Some (f s)
+  let map_lwt f = function
+	| None -> Lwt.return None
+	| Some s -> lwt s = f s in Lwt.return (Some s)
 
-let lwt_opt_map f = function
-  | None -> Lwt.return None
-  | Some s -> lwt s = f s in Lwt.return (Some s)
+  let map_list f = function
+	| Some x -> f x
+	| None -> []
 
-let opt_iter f = function
-  | None -> ()
-  | Some s -> f s
+  let default s = function
+	| Some x -> x
+	| None -> s
 
-let opt_string ?(def="")= function 
-  | Some s -> s
-  | None -> def
+end
 
-let opt_unnamed = function
-  | Some s -> s
-  | None -> "Unnamed"
-
-let opt_map_list f = function
-  | Some x -> f x
-  | None -> []
-
-let opt_list = function
-  | Some x -> x
-  | None -> []
 
 (* Stupid piece of code because of fuck*ng monads *)
 let silly f = fun a b -> Lwt.return (fun u -> f a b u)

@@ -92,7 +92,7 @@ let get_name pID =
 	  >>
   in 
   (view_one ~log:stderr name)
-  >|= (fun x -> opt_string x#?name)
+  >|= (fun x -> Option.default "" x#?name)
 	 
 let get_sons pID =
   let schematics = 
@@ -111,7 +111,7 @@ let get_sons pID =
 	  object.typeID = product.typeID ;
 	  >> in
   (view ~log:stderr sons)
-  >|= List.map (fun x -> (x#!id, opt_unnamed x#?name))
+  >|= List.map (fun x -> (x#!id, Option.default "Unnamed" x#?name))
   
 let categorygoals = 43l
 
@@ -128,7 +128,7 @@ let get_possible_goals () =
 	  pi.groupID = nullable g.id ;
 	  >> in
   (view ~log:stderr goals)
-  >|= List.map (fun x -> (x#!id, opt_unnamed x#?name))
+  >|= List.map (fun x -> (x#!id, Option.default "Unnamed" x#?name))
 
 let planets_id =
   [ (30889l, "Shattered");
@@ -152,7 +152,7 @@ let id_to_planet id = List.assoc id planets_id
 let get_systems () =
   (query 
 	  <:select< system | system in $mapSolarSystems$ ; >> )
-  >|= List.map (fun s -> s#!solarSystemID, opt_unnamed s#?solarSystemName)
+  >|= List.map (fun s -> s#!solarSystemID, Option.default "Unnamed" s#?solarSystemName)
 
 let planet_groupID = 7l
 
@@ -166,7 +166,7 @@ let get_planets_by_system system_name =
 		nullable system.solarSystemID = planet.solarSystemID ;
 		planet.groupID = $int32:planet_groupID$ ;
 		>>)
-  >|= List.map (fun s -> s#!id, opt_unnamed s#?name, id_to_planet (opt_planet_type s#?typ))
+  >|= List.map (fun s -> s#!id, Option.default "Unnamed" s#?name, id_to_planet (opt_planet_type s#?typ))
 
 (** Get planet info : (name,type,system) *)
 let get_info planet_id = 
@@ -181,6 +181,6 @@ let get_info planet_id =
 		>>)
 	 >|= 
   (fun s -> 
-	 opt_unnamed s#?name, 
+	 Option.default "Unnamed" s#?name, 
 	 id_to_planet (opt_planet_type s#?typ), 
-	 opt_unnamed s#?system)
+	 Option.default "Unnamed" s#?system)

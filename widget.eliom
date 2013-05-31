@@ -305,11 +305,11 @@ let make_planet_list_by_loc user_id =
     lwt (name,typ,system) = Sdd.get_info (Helpers.loc p) in
 	let note = (Helpers.note_opt p) in
 	lwt product = 
-	  lwt_opt_map 
+	  Option.map_lwt 
 		(fun p -> lwt tip = get_typeid p in Sdd.get_name tip) 
 		(Helpers.prod_opt p) in 
 	lwt project = 
-	  lwt_opt_map 
+	  Option.map_lwt 
 		(fun x -> lwt name = QProject.get_name x in Lwt.return (x,name))
 		(Helpers.proj_opt p) in
 	lwt all_projects = QProject.fetch_by_user user_id in 
@@ -333,9 +333,9 @@ let make_planet_list_by_loc user_id =
 		   | None -> pcdata "None") 
 		 :: (Dropdown.a [icon ~white:true "edit"] all_proj))
 	  ] in
-	let product = opt_map_list (fun p -> 
+	let product = Option.map_list (fun p -> 
 		[br () ; pcdata ("Product : "^p)]) prod in
-	let note = opt_map_list (fun n -> [br () ; pcdata n]) note in 
+	let note = Option.map_list (fun n -> [br () ; pcdata n]) note in 
 	(proj @ product @ note)
   in 
   user_planet_list_grouped ~arrange ~format_group ~format_info user_id
@@ -345,11 +345,11 @@ let make_planet_list_by_project user_id =
     lwt (name,typ,system) = Sdd.get_info (Helpers.loc p) in
 	let note = (Helpers.note_opt p) in
 	lwt product = 
-	  lwt_opt_map 
+	  Option.map_lwt 
 		(fun p -> lwt tip = get_typeid p in Sdd.get_name tip) 
 		(Helpers.prod_opt p) in 
 	lwt project = 
-	  lwt_opt_map 
+	  Option.map_lwt 
 		(fun x -> lwt name = QProject.get_name x in Lwt.return (x,name))
 		(Helpers.proj_opt p) in
 	lwt all_projects = QProject.fetch_by_user user_id in 
@@ -376,9 +376,9 @@ let make_planet_list_by_project user_id =
 		   | None -> pcdata "None") 
 		 :: (Dropdown.a [icon ~white:true "edit"] all_proj))
 	  ] in
-	let product = opt_map_list (fun p -> 
+	let product = Option.map_list (fun p -> 
 		[br () ; pcdata ("Product : "^p)]) prod in
-	let note = opt_map_list (fun n -> [br () ; pcdata n]) note in 
+	let note = Option.map_list (fun n -> [br () ; pcdata n]) note in 
 	(proj @ product @ note)
   in 
   user_planet_list_grouped ~arrange ~format_group ~format_info user_id
