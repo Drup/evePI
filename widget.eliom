@@ -20,12 +20,6 @@ open F
 
 (** {1 Project} *)
 
-let make_link_member_project (project_id,project_name) = 
-  a ~service:project_member_coservice [pcdata project_name] project_id
-
-let make_link_project_page project_id project_name = 
-  a ~a:(classe "btn") ~service:project_member_coservice [pcdata project_name] project_id
-
 (** Join a project *)
 
 let join_project_service = 
@@ -64,7 +58,9 @@ let make_projects_list user =
   in
   let aux (id, name, desc) =
     ((dt [span ~a:[a_class ["btn-group"]] [
-            make_link_project_page id name ; 
+            a ~a:[a_class ["btn"]]
+			  ~service:project_member_coservice 
+			  [pcdata name] id ; 
             make_button id name
           ]],[]),
      (dd [pcdata desc],[]))
@@ -336,7 +332,7 @@ let make_planet_list_by_loc user_id =
 	  [pcdata "Project : " ; 
 	   divc "dropdown" (
 		 (match proj with 
-			 Some p -> make_link_member_project p
+			 Some p -> member_project_link p
 		   | None -> pcdata "None") 
 		 :: (Dropdown.a [icon ~white:true "edit"] all_proj))
 	  ] in
@@ -368,7 +364,7 @@ let make_planet_list_by_project user_id =
   in
   let format_group = function
 	| None -> [pcdata "Unafiliated"]
-	| Some p -> [make_link_member_project p] 
+	| Some p -> [member_project_link p] 
   in 
   let format_info (planet_id,proj,all_proj,prod,note) = 
 	let open Html5.D in
@@ -379,7 +375,7 @@ let make_planet_list_by_project user_id =
 	  [pcdata "Project : " ; 
 	   divc "dropdown" (
 		 (match proj with 
-			 Some p -> make_link_member_project p
+			 Some p -> member_project_link p
 		   | None -> pcdata "None") 
 		 :: (Dropdown.a [icon ~white:true "edit"] all_proj))
 	  ] in

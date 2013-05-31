@@ -293,21 +293,6 @@ let _ =
               Lwt.return ()
       ))
 
-(** Administration projet *)
-let project_admin_service =
-  Eliom_service.service
-    ~path:["projects";"admins"]
-    ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
-
-let make_admin_project_link project_id project_name = 
-  a ~service:project_admin_service [pcdata project_name] project_id
-
-let make_admin_projects_list user = 
-  lwt projects = QProject.fetch_by_admin user in
-  let aux (id,name) = 
-    li [make_admin_project_link id name]
-  in 
-  Lwt.return (ul (List.map aux projects))
 
 (** Tools to make the usual layout of an evePI page *)
 
@@ -329,7 +314,7 @@ let menu user =
   in
   lwt projects = QProject.fetch_by_user user in
   let projects = 
-	List.map (fun x -> li [make_link_member_project x]) projects in
+	List.map (fun x -> li [member_project_link x]) projects in
   let projects = match projects with
 	| [] -> []
 	| _ -> [ Dropdown.nav [pcdata "My Projects"; caret] projects ]
@@ -435,7 +420,7 @@ let () =
             ("Eveπ - Project : "^ project_name)
             [ stitlebar ~h:h3
 				[pcdata "Project : "; 
-				 make_link_member_project (project,project_name) ]
+				 member_project_link (project,project_name) ]
 				admin_link ;
               trees ;
             ] in
@@ -471,7 +456,7 @@ let () =
           lwt roots_id = QProject.get_roots project in
           lwt planets = specialize_planet_form project in
 		  lwt add_goal = add_goal_form project in 
-		  let link_project = make_link_member_project (project,project_name) in 
+		  let link_project = member_project_link (project,project_name) in 
 		  let editable_name = editable_name 
 			  ~default_name:project_name link_project change_name_service project in 
           make_page

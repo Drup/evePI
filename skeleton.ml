@@ -1,3 +1,5 @@
+(** This file give the basic organization of eveπ. *)
+
 open Eliom_lib
 open Eliom_content
 open Eliom_service
@@ -23,7 +25,7 @@ let main_service =
   Eliom_service.preapply
 	~service:main_sort_service None
 
-(** The Default page if you are not logged in *)
+(** The default page if you are not logged in *)
 let default_content () =
   make_page evepi [
     container
@@ -52,3 +54,15 @@ let project_member_coservice =
   Eliom_service.service
     ~path:["projects"] 
     ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
+
+let member_project_link (project_id,project_name) = 
+  a ~service:project_member_coservice [pcdata project_name] project_id
+
+(** Administration page for a project *)
+let project_admin_service =
+  Eliom_service.service
+    ~path:["projects";"admins"]
+    ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
+
+let admin_project_link project_id project_name = 
+  a ~service:project_admin_service [pcdata project_name] project_id
