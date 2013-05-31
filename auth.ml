@@ -1,3 +1,5 @@
+(** This file describes the handling of users *)
+
 
 open Eliom_lib
 open Eliom_content
@@ -10,12 +12,12 @@ open EvePI_db
 open Bootstrap
 
 
-(** The connected user *)
+(** {1 The connected user} *)
 
 type user = {id : int64 ; name : string}
 let user = Eliom_reference.eref ~scope:Eliom_common.default_session_scope None
 
-(** The connexion *)
+(** {1 The connexion} *)
 
 let connection_service =
   Eliom_service.post_coservice'
@@ -94,8 +96,9 @@ let disconnect_button =
         ~button_type:`Submit [pcdata "Log out"] ]) ()
 
 
-(** Le Module Connected
-    Permet de considérer qu'on est toujours connecté et servir une page par defaut quand ce n'est pas le cas *)
+(** The Connected Module
+	This is module wraps usual services to allow an additionnal argument : the user.
+	If the user is not connected, it's redirected to Default_content.v *)
 
 module type Default_content =
 sig 
