@@ -59,6 +59,55 @@ let make_list user =
   in
   Lwt.return (List.map aux projects)
 
+
+(** {3 Create a project} *)
+
+let create_service =
+  Eliom_service.post_coservice
+    ~fallback:project_list_service
+    ~post_params:Eliom_parameter.(
+		string "name" ** 
+		  string "description" ** 
+		  int32 "goal") ()
+
+let create_form () = 
+  lwt goals = Sdd.get_possible_goals () in
+  let (ghd,gtl) = 
+    let f (id,name) = 
+      Option ([],id,Some (pcdata name),true) in
+    f (List.hd goals), List.map f (List.tl goals)
+  in
+  let fun_form (name,(desc,goal)) = 
+	[div ~a:[a_class ["input-prepend";"input-append"]]
+	   [ string_input ~a:[a_placeholder "Name"] 
+		   ~input_type:`Text ~name:name () ;
+		 string_input ~a:[a_placeholder "Description"] 
+		   ~input_type:`Text ~name:desc () ;
+		 int32_select ~name:goal ghd gtl ;
+		 button 
+		   ~a:[a_class ["btn"]]
+		   ~button_type:`Submit [pcdata "Create"] ;
+	   ]] in 
+  Lwt.return (
+	post_form ~a:[a_class ["form-inline"]]
+	  ~service:create_service
+	  fun_form ())
+
+let _ = 
+  Wrap.action_with_redir_register 
+    ~redir:project_list_service
+    ~service:create_service
+    (fun admin () (project,(desc,goal)) -> (
+        lwt project_id = QProject.create project desc in
+        lwt _ = QUser.attach project_id admin.id in
+        lwt _ = QAdmin.promote project_id admin.id in
+        lwt tree = 
+          Tree.make (fun id -> (Sdd.get_sons id) >|= List.map fst) goal in 
+        lwt _ = QProject.fill_tree project_id tree in
+        Lwt.return ()
+      ))
+
+
 (** {2 Project adminstration widgets *)
 
 (** {3 Add a new goal to a project} *)
