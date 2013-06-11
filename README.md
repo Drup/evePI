@@ -10,12 +10,12 @@ The tool is written in [Eliom][eliom], a language/framework to program websites 
 I use [Macaque][macaque] for pgsql interfacing in a type-safe way.
 I also use [Bootstrap][bootstrap] for the website layout.
 
-You will also need [sqlite][sqlite] and [safepass][safepass]
+You will also need [sqlite][sqlite], [safepass][safepass] and [macaque_lwt][macaque_lwt].
 
 Install all of this easily with opam : 
 
 ```
-opam install sqlite3-ocaml safepass macaque eliom
+opam install sqlite3-ocaml safepass macaque eliom macaque_lwt
 ```
 
 How to install it
@@ -42,5 +42,6 @@ See [Hacking.md](Hacking.md) for a description of the code organization.
 [eliom]: http://ocsigen.org/eliom/ "Eliom"
 [bootstrap]: http://twitter.github.io/bootstrap/ "Bootstrap"
 [macaque]: http://macaque.forge.ocamlcore.org/ "Macaque"
+[macaque_lwt]: https://bitbucket.org/deplai_j/macaque_lwt "Macaque_lwt"
 [sqlite]: https://bitbucket.org/mmottl/sqlite3-ocaml "Sqlite3-ocaml"
 [safepass]: http://ocaml-safepass.forge.ocamlcore.org/ "Safepass"

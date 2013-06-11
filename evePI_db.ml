@@ -76,7 +76,7 @@ let projects_admins =
 
 let q_currval seq = << { id = currval $seq$ } >>
 let get_currval seq = 
-  lwt currval = view_one ~log:stderr (q_currval seq) in
+  lwt currval = view_one (q_currval seq) in
   Lwt.return currval#!id
 
 
@@ -86,8 +86,8 @@ let get_currval seq =
 
 module QProject = struct 
 let exist project = 
-  (query
-	  <:select< row | 
+  (view
+	  << row | 
 		row in $projects$ ;
 		row.id = $int64:project$ ;
 		>>)
@@ -106,7 +106,7 @@ let update_descr project_id description =
 	  >>
 
 let fetch_all () =
-  (query <:select< project 
+  (view << project 
 	         order by project.id asc | 
 		   project in $projects$ >>)
   >|= List.map (fun r -> r#!id, r#!name, r#!description)
@@ -133,7 +133,7 @@ let fetch_by_admin id =
 
 (** Create a new project, return the id of the project *)
 let create name description = 
-  lwt _ = query ~log:stderr
+  lwt _ = query
 	  <:insert< $projects$ :=
 	 		{ id = projects?id ;
 			name = $string:name$ ; 
@@ -265,8 +265,8 @@ let delete planet_id =
 	<:delete< planet in $planets$ | planet.id = $int64:planet_id$ >>
 
 let is_attached planet_id user_id = 
-  (query
-	 <:select< planet |
+  (view
+	 << planet |
 			  planet in $planets$ ;
 			  planet.user_id = $int64:user_id$ ;
 			  planet.id = $int64:planet_id$ ;
@@ -402,8 +402,8 @@ let attach project user =
 			 } >>
 
 let is_attached project user =
-  (query
-	 <:select< row |
+  (view
+	 << row |
 			  row in $projects_users$ ;
 			  row.user_id = $int64:user$ ;
 			  row.project_id = $int64:project$ ;
@@ -425,8 +425,8 @@ let promote project user =
 			 } >>
 
 let verify project user = 
-  (query
-	 <:select< row |
+  (view
+	 << row |
 			  row in $projects_admins$ ;
 			  row.user_id = $int64:user$ ;
 			  row.project_id = $int64:project$ ;

@@ -90,7 +90,7 @@ let get_name pID =
 	  object.typeID = $int32:pID$ ;
 	  >>
   in 
-  (view_one ~log:stderr name)
+  (view_one name)
   >|= (fun x -> Option.default "" x#?name)
 	 
 let get_sons pID =
@@ -109,7 +109,7 @@ let get_sons pID =
 	  object in $invtypes$ ;
 	  object.typeID = product.typeID ;
 	  >> in
-  (view ~log:stderr sons)
+  (view sons)
   >|= List.map (fun x -> (x#!id, Option.default "Unnamed" x#?name))
   
 let categorygoals = 43l
@@ -126,7 +126,7 @@ let get_possible_goals () =
 	  pi in $invtypes$ ;
 	  pi.groupID = nullable g.id ;
 	  >> in
-  (view ~log:stderr goals)
+  (view goals)
   >|= List.map (fun x -> (x#!id, Option.default "Unnamed" x#?name))
 
 let planets_id =
@@ -149,8 +149,8 @@ let planet_to_id t = fst (List.find (fun (_,t') -> t = t') planets_id)
 let id_to_planet id = List.assoc id planets_id
 
 let get_systems () =
-  (query 
-	  <:select< system | system in $mapSolarSystems$ ; >> )
+  (view
+	  << system | system in $mapSolarSystems$ ; >> )
   >|= List.map (fun s -> s#!solarSystemID, Option.default "Unnamed" s#?solarSystemName)
 
 let planet_groupID = 7l
