@@ -140,7 +140,7 @@ module Replacer = struct
 end
 }}
 
-
+{shared{
 (* TODO bind the enter key to "send" *)
 let editable_name ?(default_name="New name") content service id = 
   let fake_input = 
@@ -158,24 +158,22 @@ let editable_name ?(default_name="New name") content service id =
   let _  = {unit{
 	  let container = %container in 
 	  let original = %content in 
-	  let cancel = %cancel in 
-	  let confirm = %confirm in 
+	  let trigger, confirm, cancel = %trigger, %confirm, %cancel in 
 	  let fake_input = %fake_input in 
-	  let trigger = %trigger in
 	  let replacement = [fake_input; confirm; cancel] in 
 	  let _ = Replacer.click_multishot container replacement
-		  (To_dom.of_a trigger) in
+		  (To_dom.of_element trigger) in
 	  let _ = Replacer.click_multishot container [original;trigger]
-		  (To_dom.of_a cancel) in 
+		  (To_dom.of_element cancel) in 
 	  Lwt.async (fun () -> 
 		let open Lwt_js_events in 
-		click (To_dom.of_a confirm) >>= (fun _ ->
+		click (To_dom.of_element confirm) >>= (fun _ ->
 		  let new_name = Js.to_string (To_dom.of_span fake_input)##innerHTML in 
 		  Eliom_client.change_page ~service:%service () (%id,new_name)
 		))
 	}} in 
   container 
-
+}}
 
 (** Let's package everything into F and D modules *)
 
