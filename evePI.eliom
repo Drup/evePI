@@ -37,34 +37,35 @@ let new_planet_service =
   Eliom_service.post_coservice'
     ~post_params:Eliom_parameter.(opt_int64 "project" ** int32 "location") ()
 
-{client{
+    {client{
 
-let select_system_handler slist location planet_div select_system =
-  let open Lwt_js_events in
-  let select_system = To_dom.of_input select_system in
-  let slist = Js.array (Array.of_list (List.map Js.string slist)) in
-  let updater s =
-    let current_system = Js.to_string s in
-    lwt list = 
-      %rpc_get_planets_by_system current_system in
-    let list = List.map 
-        (fun (id,name,typ) -> 
+	let select_system_handler slist location planet_div select_system =
+	  let open Lwt_js_events in
+	  let select_system = To_dom.of_input select_system in
+	  let slist = Js.array (Array.of_list (List.map Js.string slist)) in
+	  let updater s =
+	    let current_system = Js.to_string s in
+	    lwt list = 
+	      %rpc_get_planets_by_system current_system in
+	    let list = List.map 
+		(fun (id,name,typ) -> 
 		   Option ([],id,Some (pcdata (name ^ " ("^typ^")")),true)) list in
-    let head,tail = match list with
-      | [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
-      | hd::tl -> hd,tl in
-    let planet_select = int32_select ~name:location head tail in
-    let _ = Manip.replaceAllChild planet_div [planet_select] in
-    Lwt.return () in 
-  let updater s = Lwt.ignore_result (updater s) ; s in
-  Lwt.async (fun () -> 
-    Typeahead.apply 
-      ~source:slist  
-      ~items:6
-      ~updater
-      select_system ; 
-    Lwt.return () )
-}}
+	    let head,tail = match list with
+	      | [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
+	      | hd::tl -> hd,tl in
+	    let planet_select = int32_select ~name:location head tail in
+	    let _ = Manip.replaceAllChild planet_div [planet_select] in
+	    Lwt.return () in 
+	  let updater s = Lwt.ignore_result (updater s) ; s in
+	  Lwt.async (fun () -> 
+	    Typeahead.apply 
+	      ~source:slist  
+	      ~items:6
+	      ~updater
+	      select_system ; 
+	    Lwt.return () )
+
+      }}
 
 let new_planet_form user =
   lwt phead,plist = QProject.fetch_by_user user >|= list_to_select "No project" in
@@ -80,53 +81,27 @@ let new_planet_form user =
         %slist %location 
         %planet_place %select_system }} in
     [ 
-	  divcs ["input-prepend";"input-append"] 
-		[ user_type_select 
-			(function None -> "" | Some x -> Int64.to_string x)
-			~name:proj phead plist ;
-		  select_system ;
-		  planet_place ;
-		  button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
-		]]
+      divcs ["input-prepend";"input-append"] 
+	[ user_type_select 
+	    (function None -> "" | Some x -> Int64.to_string x)
+	    ~name:proj phead plist ;
+	  select_system ;
+	  planet_place ;
+	  button ~a:(classes ["btn"]) ~button_type:`Submit [pcdata "Create"] ;
+	]]
   in
   Lwt.return (
-	post_form ~a:(classe "form-inline")
-	  ~service:new_planet_service
-	  form_fun ())
+    post_form ~a:(classe "form-inline")
+      ~service:new_planet_service
+      form_fun ())
 
 let _ =
   Wrap.action_register
     ~service:new_planet_service
     (fun user () (project,location) -> (
-        lwt _ = QPlanet.create ?project user.id location in
-        Lwt.return ()
-      ))
-
-(* Attacher une planete à un project *)
-
-let attach_planet_service =
-  Eliom_service.post_coservice'
-    ~post_params:Eliom_parameter.(int64 "planet" ** int64 "project") ()
-
-let attach_planet_form user planet =
-  lwt project_list = QProject.fetch_by_user user in
-  let project_list = 
-    List.map (fun (id,name) -> Option ([],id,Some (pcdata name),true)) project_list in
-  let head = Option ([],Int64.zero,Some (pcdata ""),false) in
-  Lwt.return (post_form ~a:(classe "form-inline")
-      ~service:attach_planet_service
-      (fun (plan,proj) -> [ 
-        int64_select ~name:proj head project_list ;
-        int64_button ~name:plan ~value:planet ~a:(classes ["btn"]) [pcdata "Attach"] ;
-      ]) ())
-
-let _ =
-  Wrap.action_register
-    ~service:attach_planet_service
-    (fun user () (planet,project) -> (
-        lwt _ = QPlanet.update_project planet project in
-        Lwt.return ()
-      ))
+         lwt _ = QPlanet.create ?project user.id location in
+         Lwt.return ()
+       ))
 
 (* Produire sur une planete *)
 
@@ -151,7 +126,7 @@ let get_project_tree form_prod project =
   lwt list = Tree.Lwt.printf format_node trees in
   Lwt.return (nodes, list)
 
-{client{
+    {client{
 
 module LightActions = struct
   let class_node_hover = "tree-hover"
@@ -164,13 +139,13 @@ module LightActions = struct
     node##classList##add(Js.string node_class)
 
   let down node_class node = 
-	node##classList##remove(Js.string node_class)
+    node##classList##remove(Js.string node_class)
 
   let on_hover _ node = 
-	up class_node_hover node ; Lwt.return () 
+    up class_node_hover node ; Lwt.return () 
 
   let on_leave _ node = 
-	down class_node_hover node ; Lwt.return ()
+    down class_node_hover node ; Lwt.return ()
 
   let on_dummy current = match !current with 
       Some cur_b -> down class_node_select cur_b ; Lwt.return ()
@@ -180,7 +155,7 @@ module LightActions = struct
     lwt _ = on_dummy current in 
     current := Some node ;
     up class_node_select node ;
-	Lwt.return ()
+    Lwt.return ()
 
 end
 
@@ -200,10 +175,10 @@ let make_planet_list_form form_planet nodes project =
     let node = hashtbl_find nodes node_id in
     let planet = D.int64_radio ~name:form_planet ~value:planet_id () in
     ignore {unit{ 
-		%init_planet 
-			(To_dom.of_input %planet :> Dom_html.eventTarget Js.t) 
-			(opt_map To_dom.of_button %node :> Dom_html.element Js.t option) 
-	  }} ;
+	%init_planet 
+	    (To_dom.of_input %planet :> Dom_html.eventTarget Js.t) 
+	    (opt_map To_dom.of_button %node :> Dom_html.element Js.t option) 
+      }} ;
     planet in
   let aux_users (user, planet_list) =
     let free_planets, planets = 
@@ -236,20 +211,20 @@ let _ =
   Wrap.action_register
     ~service:specialize_planet_service
     (fun user () (planet,product) -> (
-        match planet with
-            None -> Lwt.return ()
-          | Some planet -> 
-              lwt _ = QPlanet.update_product planet product in
-              Lwt.return ()
-      ))
+         match planet with
+             None -> Lwt.return ()
+           | Some planet -> 
+               lwt _ = QPlanet.update_product planet product in
+               Lwt.return ()
+       ))
 
 
 (** Tools to make the usual layout of an evePI page *)
 
 let stitlebar ?(h=h3) title content = 
   STitle.simple (
-	(li [h title]) ::
-	  content 
+    (li [h title]) ::
+      content 
   )
 
 let stitle ?(h=h3) title =
@@ -264,10 +239,10 @@ let menu user =
   in
   lwt projects = QProject.fetch_by_user user in
   let projects = 
-	List.map (fun x -> li [member_project_link x]) projects in
+    List.map (fun x -> li [member_project_link x]) projects in
   let projects = match projects with
-	| [] -> []
-	| _ -> [ Dropdown.nav [pcdata "My Projects"; caret] projects ]
+    | [] -> []
+    | _ -> [ Dropdown.nav [pcdata "My Projects"; caret] projects ]
   in 
   Lwt.return (navbar 
       ~classes:["navbar-static-top"]
@@ -284,10 +259,10 @@ let menu user =
 let make_page ?(css=[]) user title body =
   lwt menu = menu user in
   Lwt.return (
-	make_page 
-	  ~css:(["css";"evePI.css"]::css)
-	  title
-	  (menu :: [ divcs ["main";"container"] body ]))
+    make_page 
+      ~css:(["css";"evePI.css"]::css)
+      title
+      (menu :: [ divcs ["main";"container"] body ]))
 
 (** The real thing *)
 
@@ -295,23 +270,23 @@ let () =
   Connected.register
     ~service:main_sort_service
     (silly (fun sort () user ->
-		lwt form = new_planet_form user.id in
-		lwt planets = make_planet_list sort user.id in
-		make_page 
-		  user.id
-		  evepi
-		  [ center 
-			  [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
-			stitlebar [pcdata "My planets"] [
-			  STitle.divider () ;
-			  li [pcdata "Sort by : "] ;
-			  dropdown_sort sort ;
-			] ;
-			planets ;
-			stitle [pcdata "Register a new planet"] ; 
-			form ;
-		  ]
-	  )) ;
+	lwt form = new_planet_form user.id in
+	lwt planets = make_planet_list sort user.id in
+	make_page 
+	  user.id
+	  evepi
+	  [ center 
+	      [h1 ~a:(classe "text-center") [pcdata ("Welcome to "^evepi)] ];
+	    stitlebar [pcdata "My planets"] [
+	      STitle.divider () ;
+	      li [pcdata "Sort by : "] ;
+	      dropdown_sort sort ;
+	    ] ;
+	    planets ;
+	    stitle [pcdata "Register a new planet"] ; 
+	    form ;
+	  ]
+      )) ;
 
   Connected.register 
     ~service:project_list_service
@@ -322,13 +297,13 @@ let () =
           user.id
           "Eveπ - Projects"
           [ stitlebar ~h:h3
-			  [pcdata "They want "; 
-			   em [pcdata "you"] ; 
-			   pcdata " in those projects !"]
-			  [ STitle.divider () ; 
-				li [Collapse.a "create_project_form" [pcdata "Create a new project"]]  ]
-			;
-			Collapse.div "create_project_form" [project_form] ;
+	      [pcdata "They want "; 
+	       em [pcdata "you"] ; 
+	       pcdata " in those projects !"]
+	      [ STitle.divider () ; 
+		li [Collapse.a "create_project_form" [pcdata "Create a new project"]]  ]
+	    ;
+	    Collapse.div "create_project_form" [project_form] ;
             dl ~a:(classes []) projects_list ;
           ]
       )) ;
@@ -348,11 +323,11 @@ let () =
             user.id
             ("Eveπ - Project : "^ project_name)
             [ center [
-				 h2 [pcdata "Project : " ; 
-					 em [pcdata project_name]] ;
-				 h3 [pcdata "You are not attached to this project " ; 
-					 Wproject.join_btn project]
-			   ]
+		 h2 [pcdata "Project : " ; 
+		     em [pcdata project_name]] ;
+		 h3 [pcdata "You are not attached to this project " ; 
+		     Wproject.join_btn project]
+	       ]
             ] in
         let regular_page () =
           lwt project_name = QProject.get_name project in
@@ -361,17 +336,17 @@ let () =
           let admin_link = 
             if is_admin then
               [ STitle.divider () ;
-				li [a ~service:project_admin_service 
-					  [pcdata "go to the admin panel"] project ]]
+		li [a ~service:project_admin_service 
+		      [pcdata "go to the admin panel"] project ]]
             else [] 
           in
           make_page
             user.id
             ("Eveπ - Project : "^ project_name)
             [ stitlebar ~h:h3
-				[pcdata "Project : "; 
-				 member_project_link (project,project_name) ]
-				admin_link ;
+		[pcdata "Project : "; 
+		 member_project_link (project,project_name) ]
+		admin_link ;
               trees ;
             ] in
         lwt exist = QProject.exist project in
@@ -405,21 +380,21 @@ let () =
           lwt project_name = QProject.get_name project in
           lwt roots_id = QProject.get_roots project in
           lwt planets = specialize_planet_form project in
-		  lwt add_goal = Wproject.add_goal_form project in 
-		  let link_project = member_project_link (project,project_name) in 
-		  let editable_name = editable_name 
-			  ~default_name:project_name link_project 
-			  Wproject.change_name_service project in 
+	  lwt add_goal = Wproject.add_goal_form project in 
+	  let link_project = member_project_link (project,project_name) in 
+	  let editable_name = editable_name 
+	      ~default_name:project_name link_project 
+	      Wproject.change_name_service project in 
           make_page
             user.id
             ("Eveπ - Admin panel - Project : "^ project_name)
             [ stitlebar ~h:h3
-				[pcdata "Admin panel - Project : "; 
-				 editable_name ]
-				[ STitle.divider () ; 
-				  li [Collapse.a "add_goal_form" [pcdata "Add a new goal"]]  ]
-			  ;
-			  Collapse.div "add_goal_form" [add_goal] ;
+		[pcdata "Admin panel - Project : "; 
+		 editable_name ]
+		[ STitle.divider () ; 
+		  li [Collapse.a "add_goal_form" [pcdata "Add a new goal"]]  ]
+	      ;
+	      Collapse.div "add_goal_form" [add_goal] ;
               planets ;
             ] in
         lwt exist = QProject.exist project in
