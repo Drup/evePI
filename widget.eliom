@@ -14,61 +14,6 @@ include Wgeneral
 open F
 }}
 
-(** {1 Planet widgets} *)
-
-(** Delete a planet *)
-
-let delete_planet_service = 
-  Eliom_service.post_coservice'
-	~post_params:Eliom_parameter.(int64 "planet") ()
-
-let delete_planet_link planet = 
-  Raw.a ~a:[ 
-	a_title "Delete this planet" ; 
-	a_class ["link"] ;
-	a_onclick {{ 
-		fun _ -> Eliom_client.exit_to 
-			~service:%delete_planet_service () (%planet)
-	  }}]
-	[icon ~white:true "remove"]
-
-let _ = 
-  Wrap.action_register
-	~service:delete_planet_service
-	(fun user () planet -> 
-	   lwt is_user = QPlanet.is_attached planet user.id in 
-	   if is_user then
-		 lwt _ = QPlanet.delete planet in 
-		 Lwt.return ()
-	   else 
-		 Lwt.return ())
-
-
-(** Change the project of a planet *)
-
-let change_project_service = 
-  Eliom_service.post_coservice'
-	~post_params:Eliom_parameter.(int64 "planet" ** int64 "project") ()
-
-let change_project_link planet (project_id,project_name) = 
-  Raw.a ~a:[
-	a_class ["link"] ;
-	a_onclick {{ 
-		fun _ -> Eliom_client.exit_to
-		  ~service:%change_project_service () (%planet,%project_id)
-	  }}]
-	[pcdata project_name]
-
-let _ = 
-  Wrap.action_register
-	~service:change_project_service
-	(fun user () (planet,project) -> 
-	   lwt is_user = QPlanet.is_attached planet user.id in 
-	   if is_user then
-		 lwt _ = QPlanet.update_project planet project in 
-		 Lwt.return ()
-	   else 
-		 Lwt.return ())
 
 
 {client{
@@ -116,7 +61,7 @@ let format_planet format_info (position,id,info,typ) =
   in
   let tooltip = 
 	Popover_html.(layout "planettip" (Some Right)
-		[pcdata position ; delete_planet_link id] (format_info info)) in
+		[pcdata position ; Wplanet.delete_link id] (format_info info)) in
   [planet ; tooltip]
 
 let format_planet_list format_info list =
@@ -171,7 +116,7 @@ let make_planet_list_by_loc user_id =
 	let open D in
 	let all_proj = 
 	  li ~a:[a_class ["disabled"]] [Raw.a [pcdata "Change project"]] ::
-		List.map (fun x -> li [change_project_link planet_id x]) all_proj in
+		List.map (fun x -> li [Wplanet.change_project_link planet_id x]) all_proj in
 	let proj = 
 	  [pcdata "Project : " ; 
 	   divc "dropdown" (
@@ -214,7 +159,7 @@ let make_planet_list_by_project user_id =
 	let open D in
 	let all_proj = 
 	  li ~a:[a_class ["disabled"]] [Raw.a [pcdata "Change project"]] ::
-		List.map (fun x -> li [change_project_link planet_id x]) all_proj in
+		List.map (fun x -> li [Wplanet.change_project_link planet_id x]) all_proj in
 	let proj = 
 	  [pcdata "Project : " ; 
 	   divc "dropdown" (
