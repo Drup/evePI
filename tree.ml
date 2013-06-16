@@ -24,6 +24,16 @@ let rec map f = function
 
 let mapf f = List.map (map f)
 
+let rec to_list acc = function
+  | Leaf x -> x :: acc 
+  | Node (x,l) -> to_listf (x::acc) l
+
+and to_listf acc l = List.fold_left (fun accc t -> to_list accc t) acc l
+
+let to_list t = to_list [] t
+
+let to_listf t = to_listf [] t
+
 let rec internal_print f = function
   | Leaf node -> li ~a:[a_class ["tree"]] (f node)
   | Node (node, trees) ->
