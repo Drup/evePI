@@ -22,9 +22,9 @@ let format_grouped_data ?(a=[]) format_group format_data list =
 	| [] -> [span []]
 	| _ -> format_data l
     in
-    (dt (format_group group),[]),(dd planets,[])
+    (D.dt (format_group group),[]),(dd planets,[])
   in
-  dl ~a:((a_class ["dl-horizontal"]) :: a) (List.map aux_group list)
+  D.dl ~a:((a_class ["dl-horizontal"]) :: a) (List.map aux_group list)
   
 
 (** {1 Planets list on the home page} *)
@@ -165,17 +165,34 @@ let dropdown_sort current =
 
 let layout_planets planets = 
   List.map
-    (fun (name,typ,_) -> Wplanet.icon ~name typ)
+    (fun (name,typ,notes) -> Wplanet.icon ~name typ)
     planets
 
-let layout_node (name,notes,planets) = 
-  let content = D.div planets in
-  let dropzone = 
+let layout_node (name,notes,content) = 
+  let content = D.div content in
+  let node = 
     D.div
       [D.span ~a:[a_title notes] [pcdata name] ;
        content
       ] in
-  dropzone, content
+  node
+
+let layout_admin_node ?(a=[]) (name,notes,planets) = 
+  let aux_user ((user_id, user_name), l) =
+    let planets =
+      match l with
+	| [] -> [span []]
+	| _ -> List.map snd l
+    in
+    let container = D.dd planets in
+    user_id, container, ((D.dt [pcdata user_name],[]),(container,[]))
+  in
+  let user_planets = List.map aux_user planets in
+  let drag_info = List.map (fun (id,container,_) -> (id,container)) user_planets in
+  let content = 
+    D.dl ~a:((a_class ["dl-horizontal"]) :: a) 
+      (List.map (fun (_,_,x) -> x) user_planets) in
+  layout_node (name,notes,[content]) , drag_info
 
 let user_project_tree project user = 
   lwt trees = Qtree.project_trees project in
@@ -184,7 +201,7 @@ let user_project_tree project user =
     lwt planets = QPlanet.fetch_by_node_user id user in
     lwt planets = Lwt_list.map_s
 	(fun p -> Sdd.get_planet_info (Sql.get p#loc)) planets in
-    let node,_ = layout_node (name,notes,layout_planets planets) in
+    let node = layout_node (name,notes,layout_planets planets) in
     Lwt.return [node]
   in
   lwt free_planets = QPlanet.fetch_free ~project ~user in
@@ -198,40 +215,84 @@ let user_project_tree project user =
 
 let admin_project_tree project user = 
   lwt trees = Qtree.project_trees project in
-  let decorate_node (id,typeid,notes) =
+
+  let decorate_node (nodeid,typeid,notes) = 
     lwt name = Sdd.get_name typeid in 
     lwt planets = 
-      QPlanet.fetch_by_node id 
-      >>=
+      QPlanet.fetch_by_node nodeid  >>=
       Lwt_list.map_p (fun p -> 
-	lwt info_loc = Sdd.get_planet_info (Sql.get p#loc) in
-	Lwt.return ((Sql.get p#user_id, Sql.get p#user_name), 
-	  (Sql.get p#id,info_loc,Sql.getn p#notes)))
-      >|= 
-      list_grouping
+	lwt (name,typ,system) = Sdd.get_planet_info (Sql.get p#loc) in
+	Lwt.return (
+	  (Sql.get p#user_id, Sql.get p#user_name), 
+	  (Sql.get p#id, Wplanet.icon ~name typ)
+	))
+      >|=  list_grouping
     in
-    let html_planets = 
-      format_grouped_data 
-        (fun (id,name) -> [pcdata name])
-	layout_planets 
-	(grouped_map (fun x -> x) (fun (_,x,_) -> x) planets)
-    in
-    let node,_ = layout_node (name,notes,[html_planets]) in
-    Lwt.return [node]
+    Lwt.return (nodeid,name,notes,planets)
   in
-  lwt free_planets = QPlanet.fetch_free_by_user ~project in
+
+  let extract_planets planets = 
+    List.flatten (
+      List.map 
+	(fun ((u_id,_),l) -> List.map (fun (p_id,p_icon) -> (p_icon,(p_id,u_id))) l) 
+	planets )
+  in 
+
+  let drag_node (id,name,notes,planets) = 
+    let container, contents = layout_admin_node (name, notes, planets) in
+    id, container, contents
+  in
+
+  lwt trees = Tree.Lwt.mapf decorate_node trees in
+  let drag_trees = Tree.mapf drag_node trees in
+  let html_trees = Tree.printf (fun (_,node,_) -> [node]) drag_trees in
+
+  (* We also need to print free planets *)
   lwt free_planets = 
+    QPlanet.fetch_free_by_user ~project >>=
     lwt_grouped_map 
       Lwt.return 
-      (fun (_,loc) -> Sdd.get_planet_info loc)
-      free_planets in
+      (fun (id,loc) -> 
+	 lwt (name,typ,system) = Sdd.get_planet_info loc in
+	 Lwt.return (id,Wplanet.icon ~name typ)
+      ) in
+
+  (* FIXME the planet extraction is a bit involved (grouping + 2 * flatten ...) *)
+  let draggables = 
+    extract_planets free_planets @
+      List.flatten (Tree.to_listf 
+	  (Tree.mapf (fun (_,_,_,p) -> extract_planets p) trees)) in
+
+  let dropzones = Tree.to_listf drag_trees in
+
+  let _ = {unit{
+      let draggables = 
+	List.map 
+	  (fun (p,(pid,uid)) -> debug "%Li %Li" pid uid ; (To_dom.of_element p, (pid,uid)))
+	%draggables
+      in
+      let dropzones =
+	List.map 
+	  (fun (id, container, user_content) -> 
+	     let f planet (_,u_id) = 
+	       let user_planets = To_dom.of_dd (List.assoc u_id user_content) in
+	       Dom.appendChild user_planets planet 
+	     in
+	     (To_dom.of_element container, f, id)
+	  )
+	%dropzones 
+      in
+      debug "bouh" ;
+      draggable_init draggables dropzones 
+    }} in
+
   let free_planets = 
     format_grouped_data 
       (fun (id,name) -> [pcdata name])
-      layout_planets 
+      (List.map snd)
       free_planets in
-  lwt tree = Tree.Lwt.printf decorate_node trees in
-  Lwt.return [free_planets;tree]
+
+  Lwt.return [ free_planets; html_trees ]
 
 (* let make_free_planet_list project_id = *)
 (*   lwt users_list = QPlanet.fetch_free_by_user project_id in *)
