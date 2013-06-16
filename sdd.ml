@@ -167,8 +167,7 @@ let get_planets_by_system system_name =
 		>>)
   >|= List.map (fun s -> s#!id, Option.default "Unnamed" s#?name, id_to_planet (opt_planet_type s#?typ))
 
-(** Get planet info : (name,type,system) *)
-let get_info planet_id = 
+let get_planet_info planet_id = 
   (view_one
 	  << { name = planet.itemName ; 
 		  typ = planet.typeID ; 

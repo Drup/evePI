@@ -12,6 +12,11 @@ open Utility
 
 open F
 
+
+let icon ?(a=[]) ?name typ = 
+  let name = Option.to_list (Option.map a_title name) in
+  D.i ~a:((a_class [typ;"planet"]) :: name @ a) [] 
+
 (** {3 Delete a planet} *)
 
 let delete_service = 
@@ -32,12 +37,13 @@ let _ =
   Wrap.action_register
     ~service:delete_service
     (fun user () planet -> 
+       (* Only the user himself can delete his planets *)
        lwt is_user = QPlanet.is_attached planet user.id in 
        if is_user then
-	 lwt _ = QPlanet.delete planet in 
-	 Lwt.return ()
+	 QPlanet.delete planet
        else 
-	 Lwt.return ())
+	 Lwt.return ()
+    )
 
 
 (** {3 Change the project of a planet} *)
@@ -59,9 +65,34 @@ let _ =
   Wrap.action_register
     ~service:change_project_service
     (fun user () (planet,project) -> 
+       (* Only the user himself can change the project of his planets *)
        lwt is_user = QPlanet.is_attached planet user.id in 
        if is_user then
-	 lwt _ = QPlanet.update_project planet project in 
-	 Lwt.return ()
+	 QPlanet.update_project planet project
        else 
-	 Lwt.return ())
+	 Lwt.return ()
+    )
+
+(** {3 Change the production of a planet} *)
+
+let specialize_service = 
+  Eliom_service.post_coservice'
+    ~post_params:Eliom_parameter.(int64 "planet" ** int64 "product") ()
+
+let specialize (user,planet,product) = 
+  (* Only the admin of the project can specialize a planet *)
+  (* FIXME may be desirable to do a single request with a join here *)
+  lwt planet_info = QPlanet.get_info planet in
+  let project = Sql.getn planet_info#project in
+  lwt is_admin = Option.map_lwt (fun p -> QAdmin.verify p user) project in
+  if is_admin = Some true then 
+    QPlanet.update_product planet product 
+  else
+    Lwt.return ()
+
+let _ =
+  Wrap.unit_register
+    ~service:specialize_service
+    (fun user () (planet,product) -> 
+       specialize (user.id,planet,product)
+    )

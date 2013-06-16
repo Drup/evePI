@@ -37,7 +37,20 @@ let list_grouping l =
 let list_grouping_sort l = 
   list_grouping (List.sort (fun x y -> compare y x) l)
 
+let grouped_map f g l =
+  List.map 
+    (fun (x,y) -> f x, List.map g y)
+    l 
+
+let lwt_grouped_map f g l = 
+  Lwt_list.map_p 
+    (fun (x,y) -> 
+       lwt x = f x in
+       lwt y = Lwt_list.map_p g y in
+       Lwt.return (x,y)
+    ) 
+    l
+
 (** Hshtbl *)
 
-(* Doesn't compile without Eliom_lib, bug ? FIXME *)
 let hashtbl_find tbl = Eliom_lib.Option.map (Hashtbl.find tbl)

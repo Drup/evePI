@@ -191,26 +191,38 @@ let fill_tree project tree =
 *)
 
 let get_roots project = 
-  (view 
-	  << { id = node.product_id; typeid = node_info.typeid ; note = node.notes} |
-		node in $projects_tree$ ;
-		node_info in $products$ ;
-		node_info.id = node.product_id ;
-		node.project_id = $int64:project$ ;
-		is_null node.parent_id 
-		>>)
-   >|= List.map (fun r -> r#!id, r#!typeid, Option.default "" r#?note)
-		  
+  lwt l = view 
+   << { id = node.product_id; 
+	typeid = node_info.typeid ; 
+	note = node.notes ;}
+        order by node.product_id desc |
+     node in $projects_tree$ ;
+     node_info in $products$ ;
+     node_info.id = node.product_id ;
+     node.project_id = $int64:project$ ;
+     is_null node.parent_id 
+   >>
+  in Lwt.return 
+    (List.map (fun r -> 
+	r#!id,r#!typeid, Option.default "" r#?note
+      ) l )
+
 
 let get_sons pID = 
-  (view
-	  << { id = node.product_id; typeid = node_info.typeid ; note = node.notes } |
-		node in $projects_tree$ ;
-		node_info in $products$ ;
-		node_info.id = node.product_id ;
-		node.parent_id = $int64:pID$
-		>>)
-  >|= List.map (fun r -> r#!id,r#!typeid, Option.default "" r#?note)
+  lwt l = view
+   << { id = node.product_id; 
+	typeid = node_info.typeid ; 
+	note = node.notes }
+        order by node.product_id desc |
+     node in $projects_tree$ ;
+     node_info in $products$ ;
+     node_info.id = node.product_id ;
+     node.parent_id = $int64:pID$
+   >>
+  in Lwt.return (
+    List.map (fun r -> 
+      r#!id,r#!typeid, Option.default "" r#?note
+    ) l )
 
 end
 	 
@@ -241,6 +253,17 @@ let create ?prod ?note ?project user location =
 	  notes = of_option $note$ ;
 	  location = $int32:location$ ;
 	  } >>
+
+let get_info planet_id =
+  view_one 
+  << { user = planet.user_id ; 
+       project = planet.project_id ;
+       product = planet.product_id ;
+       location = planet.location ;
+       notes = planet.notes } |
+  planet in $planets$ ;
+  planet.id = $int64:planet_id$ ;
+  >>
 
 let update_project planet_id project =
   query
@@ -299,7 +322,32 @@ let fetch_by_user_group_loc user =
   list_grouping (List.map 
 		(fun x -> x#!loc, (x#!p, x#?proj, x#?prod)) l))
 
-let fetch_by_node product =
+let fetch_by_node ~product =
+  view
+  << { id = planet.id ; 
+       loc = planet.location ;
+       notes = planet.notes ;
+       user_id = planet.user_id ;
+       user_name = user.name } 
+      order by user.id, planet.id |
+  planet in $planets$ ;
+  user in $users$ ;
+  planet.product_id = $int64:product$ ;
+  planet.user_id = user.id ;
+  >>
+
+let fetch_by_node_user ~product ~user =
+  view
+  << { id = planet.id ; 
+       loc = planet.location ;
+       notes = planet.notes } 
+      order by planet.id |
+  planet in $planets$ ;
+  planet.product_id = $int64:product$ ;
+  planet.user_id = $int64:user$ ;
+  >>
+
+let count_by_node product =
   (view
 	  << group { p = count[planet.id] ; u = u_ }
 		  by { u_ = user.name } |
@@ -336,17 +384,35 @@ let fetch_by_project_user project user =
   >|= List.map (fun x -> x#!p,x#!loc,x#?prod)
 
 
-(** Give the number of free planets for each user in a given project *)
-let fetch_free_by_user project_id = 
-  (view
-		  << group { id = u_id ; name = u_name ; planets = count[planet.id] } by {u_id = planet.user_id ; u_name = user.name } |
-			planet in $planets$ ;
-			user in $users$ ;
-			user.id = planet.user_id ;
-			planet.project_id = $int64:project_id$ ;
-			is_null planet.product_id ;
-			>>)
-  >|= List.map (fun x -> x#!id, x#!name, x#!planets)
+(** Give the free planets for each user in a given project *)
+let fetch_free_by_user ~project = 
+  lwt l = 
+    view
+    << { id = user.id ; name = user.name ; 
+	 planet_id = planet.id ;
+	 planet_loc = planet.location } |
+    planet in $planets$ ;
+    user in $users$ ;
+    user.id = planet.user_id ;
+    planet.project_id = $int64:project$ ;
+    is_null planet.product_id ;
+    >> 
+  in
+  let l = List.map (fun p -> (p#!id,p#!name), (p#!planet_id , p#!planet_loc)) l in
+  Lwt.return (list_grouping l)
+
+let fetch_free ~user ~project = 
+  let user_id = user in
+  view
+  << { planet_id = planet.id ;
+       planet_loc = planet.location } |
+  planet in $planets$ ;
+  user in $users$ ;
+  user.id = $int64:user_id$ ;
+  planet.user_id = user.id ;
+  planet.project_id = $int64:project$ ;
+  is_null planet.product_id ;
+  >>
 
 end
 
