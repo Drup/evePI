@@ -15,7 +15,7 @@ module App =
 
 (** Home page *)
 let main_sort_service =
-  Eliom_service.service
+  Eliom_service.App.service
     ~path:[""] ~get_params:Eliom_parameter.(opt (string "sort")) ()
 
 let main_service = 
@@ -42,14 +42,14 @@ module Wrap = Connected.Wrap
 
 (** Projects list *)
 let project_list_service =
-  Eliom_service.service
+  Eliom_service.App.service
     ~path:["projects";""]
     ~get_params:Eliom_parameter.unit ()
 
 (** Project page *)
 let project_member_coservice =
-  Eliom_service.service
-    ~path:["projects"] 
+  Eliom_service.App.service
+    ~path:["projects"]
     ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
 
 let member_project_link (project_id,project_name) = 
@@ -57,7 +57,7 @@ let member_project_link (project_id,project_name) =
 
 (** Administration page for a project *)
 let project_admin_service =
-  Eliom_service.service
+  Eliom_service.App.service
     ~path:["projects";"admins"]
     ~get_params:Eliom_parameter.(suffix (int64 "project")) ()
 

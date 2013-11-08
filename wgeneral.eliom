@@ -195,10 +195,9 @@ let make_draggable ?(label=Js.string "text") dom_ref (elem,info) =
       dom_ref := None ;
     Lwt.return () in
 
-  (* The type annotation is necessary because of a limitation in optional arguments *)
-  List.iter (fun (ev,f) -> Lwt.ignore_result ((ev : ?use_capture:'a -> 'b) elem f))
-    [ dragstarts, ondragstart ;
-      dragends, ondragend ]
+  lwt () = dragstarts elem ondragstart in
+  lwt () = dragends elem ondragend in
+  Lwt.return_unit
 
 
 let make_dropzone dom_ref 
@@ -208,7 +207,7 @@ let make_dropzone dom_ref
   let ondragover  ev _   =
     if Js.to_bool ev##dataTransfer##types##contains(label) then 
       begin
-	preventDefault ev ;
+	Dom.preventDefault ev ;
 	opt_iter (fun c -> dropzone##classList##add(c)) over_class ;
 	ev##dataTransfer##dropEffect <- Js.string "move"
       end ;
@@ -216,7 +215,7 @@ let make_dropzone dom_ref
   in
 
   let ondrop ev _  =
-    preventDefault ev ;
+    Dom.preventDefault ev ;
     opt_iter (fun c -> dropzone##classList##add(c)) over_class ;
     let elem = !dom_ref in 
     dom_ref := None ;
@@ -226,19 +225,15 @@ let make_dropzone dom_ref
       f elem draginfo) elem ;
     Lwt.return () in
 
-  let ondragleave ev _ = 
-    preventDefault ev ;
+  let ondragleave ev _ =
+    Dom.preventDefault ev ;
     opt_iter (fun c -> dropzone##classList##add(c)) over_class ;
     Lwt.return () in
 
-  Lwt.async (fun () -> dragovers dropzone ondragover) ;
-
-  (* The type annotation is necessary because of a limitation in optional arguments *)
-  List.iter (fun (ev,f) -> Lwt.ignore_result ((ev : ?use_capture:'a -> 'b) dropzone f))
-    [ dragovers, ondragover ;
-      drops, ondrop ;
-      dragleaves, ondragleave ;
-    ]
+  lwt () = dragovers dropzone ondragover in
+  lwt () = drops dropzone ondrop in
+  lwt () = dragleaves dropzone ondragleave in
+  Lwt.return_unit
 
 let draggable_init
     ?drop_callback ?label ?over_class 
@@ -250,9 +245,11 @@ let draggable_init
 	| None ->  Random.self_init () ; string_of_int (Random.bits ())
     ) in
   let dom_ref = ref None in
-  List.iter (make_draggable ~label dom_ref) draggables ;
-  List.iter (make_dropzone ~label dom_ref ?drop_callback ?over_class) dropzones ;
-  ()
+  lwt () =
+    Lwt_list.iter_p (make_draggable ~label dom_ref) draggables in
+  lwt () =
+    Lwt_list.iter_p (make_dropzone ~label dom_ref ?drop_callback ?over_class) dropzones
+  in Lwt.return_unit
 
 }}
 

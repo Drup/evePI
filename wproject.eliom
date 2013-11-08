@@ -15,8 +15,8 @@ open F
 
 (** {3 Join a project} *)
 
-let join_service = 
-  Eliom_service.post_coservice'
+let join_service =
+  Eliom_service.App.post_coservice'
     ~post_params:Eliom_parameter.(int64 "project") ()
 
 let join_btn project_id =

@@ -34,7 +34,7 @@ let rpc_get_planets_by_system =
   server_function Json.t<string> Sdd.get_planets_by_system
 
 let new_planet_service =
-  Eliom_service.post_coservice'
+  Eliom_service.App.post_coservice'
     ~post_params:Eliom_parameter.(opt_int64 "project" ** int32 "location") ()
 
 {client{

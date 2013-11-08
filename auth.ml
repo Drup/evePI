@@ -17,7 +17,7 @@ let user = Eliom_reference.eref ~scope:Eliom_common.default_session_scope None
 (** {1 The connexion} *)
 
 let connection_service =
-  Eliom_service.post_coservice'
+  Eliom_service.App.post_coservice'
     ~post_params:Eliom_parameter.(string "name" ** string "password") ()
 
 (* TODO : Do a redirection in case of failure *)
@@ -38,7 +38,7 @@ let _ =
 (** {1 Account creation} *)
 
 let create_account_service =
-  Eliom_service.post_coservice'
+  Eliom_service.App.post_coservice'
     ~post_params:Eliom_parameter.(string "name" ** string "password") ()
 
 let create_account_service =
