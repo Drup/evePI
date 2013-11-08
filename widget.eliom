@@ -299,7 +299,7 @@ let admin_project_tree project user =
 	  )
 	%dropzones
       in
-      Lwt.ignore_result (draggable_init draggables dropzones)
+      draggable_init draggables dropzones
     }} in
 
   let free_planets =

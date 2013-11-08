@@ -195,9 +195,8 @@ let make_draggable ?(label=Js.string "text") dom_ref (elem,info) =
       dom_ref := None ;
     Lwt.return () in
 
-  lwt () = dragstarts elem ondragstart in
-  lwt () = dragends elem ondragend in
-  Lwt.return_unit
+  Lwt.async (fun () -> dragstarts elem ondragstart) ;
+  Lwt.async (fun () -> dragends elem ondragend)
 
 
 let make_dropzone dom_ref
@@ -230,10 +229,9 @@ let make_dropzone dom_ref
     opt_iter (fun c -> dropzone##classList##add(c)) over_class ;
     Lwt.return () in
 
-  lwt () = dragovers dropzone ondragover in
-  lwt () = drops dropzone ondrop in
-  lwt () = dragleaves dropzone ondragleave in
-  Lwt.return_unit
+  Lwt.async (fun () -> dragovers dropzone ondragover) ;
+  Lwt.async (fun () -> drops dropzone ondrop) ;
+  Lwt.async (fun () -> dragleaves dropzone ondragleave)
 
 let draggable_init
     ?drop_callback ?label ?over_class
@@ -245,11 +243,8 @@ let draggable_init
 	| None ->  Random.self_init () ; string_of_int (Random.bits ())
     ) in
   let dom_ref = ref None in
-  lwt () =
-    Lwt_list.iter_p (make_draggable ~label dom_ref) draggables in
-  lwt () =
-    Lwt_list.iter_p (make_dropzone ~label dom_ref ?drop_callback ?over_class) dropzones
-  in Lwt.return_unit
+  List.iter (make_draggable ~label dom_ref) draggables ;
+  List.iter (make_dropzone ~label dom_ref ?drop_callback ?over_class) dropzones
 
 }}
 
