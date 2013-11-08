@@ -1,0 +1,10 @@
+B _server
+B _client
+
+PKG eliom.client
+PKG eliom.server
+PKG js_of_ocaml
+PKG safepass
+PKG macaque
+
+EXT lwt
