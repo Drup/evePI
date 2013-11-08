@@ -19,23 +19,23 @@ open Db_common.PI
 
 
 let users_id_seq = <:sequence< bigserial "users_id_seq" >>
-let users = 
+let users =
   <:table< users (
 	id bigint NOT NULL DEFAULT(nextval users_id_seq),
-	name text NOT NULL,	  
+	name text NOT NULL,
 	password text NOT NULL
 	) >>
 
-let projects_id_seq = 
+let projects_id_seq =
   <:sequence< bigserial "projects_id_seq" >>
-let projects = 
+let projects =
   <:table< projects (
 	id bigint NOT NULL DEFAULT(nextval projects_id_seq),
 	name text NOT NULL,
 	description text NOT NULL
 	) >>
 
-let projects_tree_product_id_seq = 
+let projects_tree_product_id_seq =
   <:sequence< bigserial "projects_tree_product_id_seq" >>
 let projects_tree =
   <:table< projects_tree (
@@ -44,15 +44,15 @@ let projects_tree =
 	parent_id bigint,
 	notes text
 	) >>
-	 
+
 let products =
   <:table< products (
 	id bigint NOT NULL,
 	typeid integer NOT NULL
 	) >>
-	 
+
 let planets_id_seq = <:sequence< bigserial "planets_id_seq" >>
-let planets = 
+let planets =
   <:table< planets (
 	id bigint NOT NULL DEFAULT(nextval planets_id_seq),
 	user_id bigint NOT NULL,
@@ -61,21 +61,21 @@ let planets =
 	location integer NOT NULL,
 	notes text
 	) >>
-	 
-let projects_users = 
+
+let projects_users =
   <:table< projects_users (
 	project_id bigint NOT NULL,
 	user_id bigint NOT NULL
 	) >>
 
-let projects_admins = 
+let projects_admins =
   <:table< projects_admins (
 	project_id bigint NOT NULL,
 	user_id bigint NOT NULL
 	) >>
 
 let q_currval seq = << { id = currval $seq$ } >>
-let get_currval seq = 
+let get_currval seq =
   lwt currval = view_one (q_currval seq) in
   Lwt.return currval#!id
 
@@ -84,46 +84,46 @@ let get_currval seq =
 (** {1 Projects} *)
 (*****************)
 
-module QProject = struct 
-let exist project = 
+module QProject = struct
+let exist project =
   (view
-	  << row | 
+	  << row |
 		row in $projects$ ;
 		row.id = $int64:project$ ;
 		>>)
   >|= (function [] -> false | _ -> true)
-  
+
 let update_name project_id name =
   query
 	 <:update< p in $projects$ := { name = $string:name$ } |
-	  p.id = $int64:project_id$ 
+	  p.id = $int64:project_id$
 	  >>
 
 let update_descr project_id description =
   query
 	 <:update< p in $projects$ := { description = $string:description$ } |
-	  p.id = $int64:project_id$ 
+	  p.id = $int64:project_id$
 	  >>
 
 let fetch_all () =
-  (view << project 
-	         order by project.id asc | 
+  (view << project
+	         order by project.id asc |
 		   project in $projects$ >>)
   >|= List.map (fun r -> r#!id, r#!name, r#!description)
-	  
+
 let fetch_by_user id =
   (view
-   << {id = project.id ; name = project.name } 
+   << {id = project.id ; name = project.name }
 	   order by project.id asc |
     activity in $projects_users$ ;
     project in $projects$ ;
     project.id = activity.project_id ;
     activity.user_id = $int64:id$ >>)
   >|= List.map (fun p -> p#!id, p#!name)
-					
+
 let fetch_by_admin id =
   (view
-   << {id = project.id ; name = project.name } 
+   << {id = project.id ; name = project.name }
 	   order by project.id asc |
     activity in $projects_admins$ ;
     project in $projects$ ;
@@ -132,45 +132,45 @@ let fetch_by_admin id =
   >|= List.map (fun p -> p#!id, p#!name)
 
 (** Create a new project, return the id of the project *)
-let create name description = 
+let create name description =
   lwt _ = query
 	  <:insert< $projects$ :=
 	 		{ id = projects?id ;
-			name = $string:name$ ; 
+			name = $string:name$ ;
 			description = $string:description$ ;
 			} >>
   in
   get_currval projects_id_seq
-	 
+
 (** Various project informations *)
 
 let get_details project_id =
   (view_one
 				<< {name = project.name ; descr = project.description } |
 				 project in $projects$ ;
-				 project.id = $int64:project_id$ 
+				 project.id = $int64:project_id$
 				 >>)
   >|= (fun r -> r#!name, r#!descr)
 
-let get_name project_id = 
+let get_name project_id =
   get_details project_id >|= fst
-				
-  
+
+
 (** Project tree related queries *)
 
 (** Take an existing tree and add it to the {! projects_tree} table *)
-let fill_tree project tree = 
-  let new_node parent typeid = 
+let fill_tree project tree =
+  let new_node parent typeid =
 	let parent = Option.map (fun p -> <:value< $int64:p$ >>) parent in
-	lwt _ = query 
+	lwt _ = query
 		<:insert< $projects_tree$ := {
 				 project_id = $int64:project$ ;
 				 product_id = projects_tree?product_id ;
 				 parent_id = of_option $parent$ ;
-				 notes = null }				 
-				 >> in 
+				 notes = null }
+				 >> in
 	lwt currval = get_currval projects_tree_product_id_seq in
-	lwt _ = query 
+	lwt _ = query
 		<:insert< $products$ := {
 				 id = $int64:currval$ ;
 				 typeid = $int32:typeid$
@@ -178,40 +178,40 @@ let fill_tree project tree =
 	Lwt.return currval
   in
   let rec traverse_tree parent tree = match tree with
-	  Tree.Leaf typeid -> 
+	  Tree.Leaf typeid ->
 		Lwt.return () (* We don't want P0 inside the project_tree *)
-	| Tree.Node (typeid,tl) -> 
+	| Tree.Node (typeid,tl) ->
 		lwt parent = new_node parent typeid in
 		Lwt_list.iter_s (traverse_tree (Some parent)) tl
   in
   traverse_tree None tree
 
-(** Two functions used to query the project tree recursivly. 
+(** Two functions used to query the project tree recursivly.
 	See also the {! Tree} module.
 *)
 
-let get_roots project = 
-  lwt l = view 
-   << { id = node.product_id; 
-	typeid = node_info.typeid ; 
+let get_roots project =
+  lwt l = view
+   << { id = node.product_id;
+	typeid = node_info.typeid ;
 	note = node.notes ;}
         order by node.product_id desc |
      node in $projects_tree$ ;
      node_info in $products$ ;
      node_info.id = node.product_id ;
      node.project_id = $int64:project$ ;
-     is_null node.parent_id 
+     is_null node.parent_id
    >>
-  in Lwt.return 
-    (List.map (fun r -> 
+  in Lwt.return
+    (List.map (fun r ->
 	r#!id,r#!typeid, Option.default "" r#?note
       ) l )
 
 
-let get_sons pID = 
+let get_sons pID =
   lwt l = view
-   << { id = node.product_id; 
-	typeid = node_info.typeid ; 
+   << { id = node.product_id;
+	typeid = node_info.typeid ;
 	note = node.notes }
         order by node.product_id desc |
      node in $projects_tree$ ;
@@ -220,17 +220,17 @@ let get_sons pID =
      node.parent_id = $int64:pID$
    >>
   in Lwt.return (
-    List.map (fun r -> 
+    List.map (fun r ->
       r#!id,r#!typeid, Option.default "" r#?note
     ) l )
 
 end
-	 
+
 let get_typeid product_id =
   (view_one
 				<< {typeid = product.typeid } |
 				 product in $products$ ;
-				 product.id = $int64:product_id$ 
+				 product.id = $int64:product_id$
 				 >>)
   >|= (fun r -> r#!typeid)
 
@@ -238,7 +238,7 @@ let get_typeid product_id =
 (** {1 Planets} *)
 (****************)
 
-module QPlanet = struct 
+module QPlanet = struct
 
 let create ?prod ?note ?project user location =
   let project = Option.map (fun p -> <:value< $int64:p$ >>) project in
@@ -255,8 +255,8 @@ let create ?prod ?note ?project user location =
 	  } >>
 
 let get_info planet_id =
-  view_one 
-  << { user = planet.user_id ; 
+  view_one
+  << { user = planet.user_id ;
        project = planet.project_id ;
        product = planet.product_id ;
        location = planet.location ;
@@ -268,26 +268,26 @@ let get_info planet_id =
 let update_project planet_id project =
   query
 	 <:update< p in $planets$ := { project_id = $int64:project$ ; product_id = null } |
-	  p.id = $int64:planet_id$ 
+	  p.id = $int64:planet_id$
 	  >>
 
 let update_product planet_id product =
   query
 	 <:update< p in $planets$ := { product_id = $int64:product$ } |
-	  p.id = $int64:planet_id$ 
+	  p.id = $int64:planet_id$
 	  >>
 
 let update_notes planet_id notes =
   query
 	 <:update< p in $planets$ := { notes = $string:notes$ } |
-	  p.id = $int64:planet_id$ 
+	  p.id = $int64:planet_id$
 	  >>
 
-let delete planet_id = 
+let delete planet_id =
   query
 	<:delete< planet in $planets$ | planet.id = $int64:planet_id$ >>
 
-let is_attached planet_id user_id = 
+let is_attached planet_id user_id =
   (view
 	 << planet |
 			  planet in $planets$ ;
@@ -311,24 +311,24 @@ let fetch_by_user user =
 let fetch_by_user_group_loc user =
   (view
 	<< { proj = planet.project_id ;
-		  p = planet.id ; 
+		  p = planet.id ;
 		  loc = planet.location ;
-        prod = planet.product_id } 
+        prod = planet.product_id }
         order by planet.location asc, planet.id asc |
-     planet in $planets$ ; 
+     planet in $planets$ ;
      planet.user_id = $int64:user$
 	 >>)
->|= (fun l -> 
-  list_grouping (List.map 
+>|= (fun l ->
+  list_grouping (List.map
 		(fun x -> x#!loc, (x#!p, x#?proj, x#?prod)) l))
 
 let fetch_by_node ~product =
   view
-  << { id = planet.id ; 
+  << { id = planet.id ;
        loc = planet.location ;
        notes = planet.notes ;
        user_id = planet.user_id ;
-       user_name = user.name } 
+       user_name = user.name }
       order by user.id, planet.id |
   planet in $planets$ ;
   user in $users$ ;
@@ -338,9 +338,9 @@ let fetch_by_node ~product =
 
 let fetch_by_node_user ~product ~user =
   view
-  << { id = planet.id ; 
+  << { id = planet.id ;
        loc = planet.location ;
-       notes = planet.notes } 
+       notes = planet.notes }
       order by planet.id |
   planet in $planets$ ;
   planet.product_id = $int64:product$ ;
@@ -360,21 +360,21 @@ let count_by_node product =
 
 let fetch_by_project project =
   (view
-		  << { u = user.name  ; 
-			    p = planet.id ; 
-			    prod = planet.product_id ; } 
+		  << { u = user.name  ;
+			    p = planet.id ;
+			    prod = planet.product_id ; }
 			order by user.name desc, planet.id asc |
 			planet in $planets$ ;
 			user in $users$ ;
 			planet.user_id = user.id ;
 			planet.project_id = $int64:project$
 			>>)
-  >|= (fun l -> 
+  >|= (fun l ->
 		 list_grouping (List.map (fun x -> x#!u, (x#!p, x#?prod)) l))
 
 let fetch_by_project_user project user =
   (view
-   << { p = planet.id ; 
+   << { p = planet.id ;
 		loc = planet.location ;
         prod = planet.product_id } |
     planet in $planets$ ;
@@ -385,10 +385,10 @@ let fetch_by_project_user project user =
 
 
 (** Give the free planets for each user in a given project *)
-let fetch_free_by_user ~project = 
-  lwt l = 
+let fetch_free_by_user ~project =
+  lwt l =
     view
-    << { id = user.id ; name = user.name ; 
+    << { id = user.id ; name = user.name ;
 	 planet_id = planet.id ;
 	 planet_loc = planet.location } |
     planet in $planets$ ;
@@ -396,12 +396,12 @@ let fetch_free_by_user ~project =
     user.id = planet.user_id ;
     planet.project_id = $int64:project$ ;
     is_null planet.product_id ;
-    >> 
+    >>
   in
   let l = List.map (fun p -> (p#!id,p#!name), (p#!planet_id , p#!planet_loc)) l in
   Lwt.return (list_grouping l)
 
-let fetch_free ~user ~project = 
+let fetch_free ~user ~project =
   let user_id = user in
   view
   << { planet_id = planet.id ;
@@ -429,12 +429,12 @@ let exist name =
     user in $users$;
     user.name = $string:name$ >>)
   >|= (function [] -> false | _ -> true)
-	 
-let get_id name = 
+
+let get_id name =
   (view_one
    << {id = user.id } |
     user in $users$ ;
-    user.name = $string:name$ 
+    user.name = $string:name$
 	>>)
   >|= (fun p -> p#!id)
 
@@ -447,7 +447,7 @@ let create name pwd =
 	query
 	  <:insert< $users$ :=
 			   { id = users?id ;
-			   name = $string:name$ ; 
+			   name = $string:name$ ;
 			   password = $string:h$  } >>
   else raise_lwt User_allready_exists
 
@@ -456,15 +456,15 @@ let check_pwd name pwd =
   (view_one
 	 <:view< {p = user.password} |
 			user in $users$;
-			user.name = $string:name$ 
+			user.name = $string:name$
   >>)
   >|= (fun s -> Bcrypt.verify pwd (Bcrypt.hash_of_string s#!p))
 
 let attach project user =
-  query 
+  query
 	<:insert< $projects_users$ := {
 			 project_id = $int64:project$ ;
-			 user_id = $int64:user$ 
+			 user_id = $int64:user$
 			 } >>
 
 let is_attached project user =
@@ -482,7 +482,7 @@ end
 (** {1 Admin} *)
 (**************)
 
-module QAdmin = struct 
+module QAdmin = struct
 let promote project user =
   query
 	<:insert< $projects_admins$ :=
@@ -490,7 +490,7 @@ let promote project user =
 			 user_id = $int64:user$ ;
 			 } >>
 
-let verify project user = 
+let verify project user =
   (view
 	 << row |
 			  row in $projects_admins$ ;
@@ -505,7 +505,7 @@ end
 (** Trick module to be able to cast macaque object whithout the syntax extension, usefull in .eliom files ... *)
 module Helpers = struct
 
-let id p = p#!id 
+let id p = p#!id
 
 let proj p = p#!proj
 let proj_opt p = p#?proj
@@ -519,6 +519,3 @@ let note p = p#!note
 let note_opt p = p#?note
 
 end
-
-
-

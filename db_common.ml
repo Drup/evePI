@@ -4,7 +4,7 @@ open Macaque_lwt
 let () = Lwt_PGOCaml.verbose := 2
 
 let connect db_name () =
-  Lwt_PGOCaml.connect 
+  Lwt_PGOCaml.connect
     ~database:db_name
     ()
 

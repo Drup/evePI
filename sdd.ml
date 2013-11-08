@@ -3,22 +3,22 @@ open Db_common.SDD
 
 open Utility
 
-let products = 
+let products =
   <:table< planetSchematics (
 	schematicID smallint NOT NULL,
 	schematicName text,
 	cycleTime integer
 	) >>
-	 
-let product_graph = 
+
+let product_graph =
   <:table< planetSchematicsTypeMap (
 	schematicID smallint NOT NULL,
 	typeID integer NOT NULL,
 	quantity smallint,
 	isInput integer
 	) >>
-	 
-let invtypes = 
+
+let invtypes =
   <:table< invTypes (
 	typeID integer NOT NULL,
 	groupID integer,
@@ -51,7 +51,7 @@ let invGroups =
 	published integer
 	) >>
 
-let mapDenormalize = 
+let mapDenormalize =
   <:table< mapDenormalize (
   itemID integer NOT NULL,
   typeID integer ,
@@ -67,7 +67,7 @@ let mapDenormalize =
   orbitIndex integer
 ) >>
 
-let mapSolarSystems = 
+let mapSolarSystems =
   <:table< mapSolarSystems (
   regionID integer ,
   constellationID integer ,
@@ -83,24 +83,24 @@ let mapSolarSystems =
   securityClass text
 )>>
 
-let get_name pID = 
-  let name = 
-	 <:view< {name = object.typeName } | 
+let get_name pID =
+  let name =
+	 <:view< {name = object.typeName } |
 	  object in $invtypes$ ;
 	  object.typeID = $int32:pID$ ;
 	  >>
-  in 
+  in
   (view_one name)
   >|= (fun x -> Option.default "" x#?name)
-	 
+
 let get_sons pID =
-  let schematics = 
+  let schematics =
 	 <:view< { sid = product.schematicID } |
 	  product in $product_graph$ ;
 	  product.isInput = $int32:Int32.zero$ ;
 	  product.typeID = $int32:pID$ ;
-	  >> in 
-  let sons = 
+	  >> in
+  let sons =
 	 <:view< { id = product.typeID ; name = object.typeName } |
 	  product in $product_graph$ ;
 	  schem in $schematics$ ;
@@ -111,17 +111,17 @@ let get_sons pID =
 	  >> in
   (view sons)
   >|= List.map (fun x -> (x#!id, Option.default "Unnamed" x#?name))
-  
+
 let categorygoals = 43l
 
-let get_possible_goals () = 
+let get_possible_goals () =
   let groups =
 	 <:view< { id = g.groupID } |
 	  g in $invGroups$ ;
 	  g.categoryID = $int32:categorygoals$ ;
 	  >> in
   let goals =
-	 <:view< { id = pi.typeID ; name = pi.typeName } | 
+	 <:view< { id = pi.typeID ; name = pi.typeName } |
 	  g in $groups$ ;
 	  pi in $invtypes$ ;
 	  pi.groupID = nullable g.id ;
@@ -142,7 +142,7 @@ let planets_id =
 
 (* kinda hacky, treat planets whitout a type as shattered *)
 let opt_planet_type = function
-	 Some i -> i 
+	 Some i -> i
   | None -> 30889l
 
 let planet_to_id t = fst (List.find (fun (_,t') -> t = t') planets_id)
@@ -155,8 +155,8 @@ let get_systems () =
 
 let planet_groupID = 7l
 
-let get_planets_by_system system_name = 
-  (view 
+let get_planets_by_system system_name =
+  (view
 	  << { id = planet.itemID ; name = planet.itemName ; typ = planet.typeID }
 		order by planet.itemID asc |
 		planet in $mapDenormalize$ ;
@@ -167,18 +167,18 @@ let get_planets_by_system system_name =
 		>>)
   >|= List.map (fun s -> s#!id, Option.default "Unnamed" s#?name, id_to_planet (opt_planet_type s#?typ))
 
-let get_planet_info planet_id = 
+let get_planet_info planet_id =
   (view_one
-	  << { name = planet.itemName ; 
-		  typ = planet.typeID ; 
+	  << { name = planet.itemName ;
+		  typ = planet.typeID ;
 		  system = system.solarSystemName ; } |
 		planet in $mapDenormalize$ ;
 		system in $mapSolarSystems$ ;
 		nullable system.solarSystemID = planet.solarSystemID ;
 		planet.itemID = $int32:planet_id$ ;
 		>>)
-	 >|= 
-  (fun s -> 
-	 Option.default "Unnamed" s#?name, 
-	 id_to_planet (opt_planet_type s#?typ), 
+	 >|=
+  (fun s ->
+	 Option.default "Unnamed" s#?name,
+	 id_to_planet (opt_planet_type s#?typ),
 	 Option.default "Unnamed" s#?system)

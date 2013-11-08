@@ -9,11 +9,11 @@ open Utility
 type 'a tree = Node of 'a * ('a tree list) | Leaf of 'a
 
 let rec make get_sons t =
-  lwt l = get_sons t in  
+  lwt l = get_sons t in
   match l with
     | [] -> Lwt.return (Leaf t)
-    | _ -> 
-        lwt trees = Lwt_list.map_s (make get_sons) l in 
+    | _ ->
+        lwt trees = Lwt_list.map_s (make get_sons) l in
         Lwt.return (Node (t, trees))
 
 let make_forest get_sons = Lwt_list.map_s (make get_sons)
@@ -25,7 +25,7 @@ let rec map f = function
 let mapf f = List.map (map f)
 
 let rec to_list acc = function
-  | Leaf x -> x :: acc 
+  | Leaf x -> x :: acc
   | Node (x,l) -> to_listf (x::acc) l
 
 and to_listf acc l = List.fold_left (fun accc t -> to_list accc t) acc l
@@ -37,30 +37,30 @@ let to_listf t = to_listf [] t
 let rec internal_print f = function
   | Leaf node -> li ~a:[a_class ["tree"]] (f node)
   | Node (node, trees) ->
-        li ~a:[a_class ["tree"]] 
+        li ~a:[a_class ["tree"]]
           (f node @
            [ul ~a:[a_class ["tree"]] (List.map (internal_print f) trees)]
           )
 
 let print f t =
-    div ~a:[a_class ["tree"]] 
+    div ~a:[a_class ["tree"]]
       [ul ~a:[a_class ["tree"]] [internal_print f t]]
 
-let printf f tl = 
-    div ~a:[a_class ["tree"]] 
+let printf f tl =
+    div ~a:[a_class ["tree"]]
       [ul ~a:[a_class ["tree"]] (List.map (internal_print f) tl)]
 
 let print_plain =
   let f name = [div ~a:[a_class ["tree"]]  [pcdata name]] in
   print f
 
-let printf_plain = 
+let printf_plain =
   let f name = [div ~a:[a_class ["tree"]]  [pcdata name]] in
   printf f
 
 (** The same operations than in { ! Tree } in the Lwt monad *)
-module Lwt = 
-struct 
+module Lwt =
+struct
 
   let rec map f = function
     | Leaf x -> lwt x = f x in Lwt.return (Leaf x)
@@ -72,7 +72,7 @@ struct
   let mapf f = Lwt_list.map_s (map f)
 
   let rec internal_print f = function
-    | Leaf node -> lwt node = f node in 
+    | Leaf node -> lwt node = f node in
         Lwt.return (li ~a:[a_class ["tree"]] node)
     | Node (node, trees) ->
         lwt node = f node in
@@ -82,17 +82,15 @@ struct
             ))
 
   let print f t =
-    lwt t = internal_print f t in 
+    lwt t = internal_print f t in
     Lwt.return (
-        div ~a:[a_class ["tree"]] 
+        div ~a:[a_class ["tree"]]
           [ul ~a:[a_class ["tree"]] [t]])
 
-  let printf f tl = 
-    lwt tl = Lwt_list.map_s (internal_print f) tl in 
+  let printf f tl =
+    lwt tl = Lwt_list.map_s (internal_print f) tl in
     Lwt.return (
-        div ~a:[a_class ["tree"]] 
+        div ~a:[a_class ["tree"]]
           [ul ~a:[a_class ["tree"]]  tl])
 
-end		
-
-
+end

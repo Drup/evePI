@@ -2,7 +2,7 @@
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
  id BIGSERIAL PRIMARY KEY,
- name text UNIQUE NOT NULL,	  
+ name text UNIQUE NOT NULL,
  password text NOT NULL
 );
 
@@ -29,7 +29,7 @@ CREATE TABLE products (
 
 DROP TABLE IF EXISTS planets;
 CREATE TABLE planets (
- id BIGSERIAL PRIMARY KEY, 
+ id BIGSERIAL PRIMARY KEY,
  user_id bigint NOT NULL references users(id) on delete cascade,
  project_id bigint DEFAULT NULL references projects(id) on delete SET NULL,
  product_id bigint DEFAULT NULL references projects_tree(product_id) on delete SET NULL,

@@ -12,7 +12,7 @@ I also use [Bootstrap][bootstrap] for the website layout.
 
 You will also need [sqlite][sqlite], [safepass][safepass] and [macaque_lwt][macaque_lwt].
 
-Install all of this easily with opam : 
+Install all of this easily with opam :
 
 ```
 opam install sqlite3-ocaml safepass macaque eliom macaque_lwt
@@ -20,8 +20,8 @@ opam install sqlite3-ocaml safepass macaque eliom macaque_lwt
 
 How to install it
 ----
-For now, you need to have two pgsql databases : 
-- One named eveSDD containing the [SDD](http://wiki.eve-id.net/CCP_Static_Data_Dump); 
+For now, you need to have two pgsql databases :
+- One named eveSDD containing the [SDD](http://wiki.eve-id.net/CCP_Static_Data_Dump);
 - One named evePI with the schema [schema.sql](schema.sql).
 
 Those should be accessible in local. You can then use ocsigen as described in the [Readme](README).
@@ -31,7 +31,7 @@ No, it's not very flexible, it will change ...
 
 Participate
 ----
-Sure, see the [todo file](TODO.md). You can of course propose features (or do them even !)   
+Sure, see the [todo file](TODO.md). You can of course propose features (or do them even !)
 I welcome ~css masters~ and designers very warmly too, because I suck at it.
 
 Don't be afraid by french comments in the code ... It happens, sometimes.

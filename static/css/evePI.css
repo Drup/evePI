@@ -1,4 +1,4 @@
-* { 
+* {
 	font-family: 'Droid Sans',sans-serif;
 }
 
@@ -321,7 +321,7 @@ body {
 .planet-list {
 	 margin: 0px !important ;
 	 font-size: 16px ;
-	 
+
 }
 
 .planet-list > .control-label {
@@ -352,7 +352,7 @@ div.tree {
 	 margin: 0px auto ;
 	 overflow-x: auto;
 	 overflow-y: hidden;
-}	 
+}
 
 .tree li {
 	 text-align: left ;
@@ -371,20 +371,20 @@ ul.tree {
 	transition: all 0.5s;
 	-webkit-transition: all 0.5s;
 	-moz-transition: all 0.5s;
-	text-align: center ; 
+	text-align: center ;
 }
 
-li.tree {	
+li.tree {
 	float:none;
 	display:inline-block;
 	white-space: nowrap;
-	vertical-align: top;	
-	margin: 0 -2px 0 -2px; 
+	vertical-align: top;
+	margin: 0 -2px 0 -2px;
 	text-align: center;
 	list-style-type: none;
 	position: relative;
 	padding: 20px 5px 0 5px;
-	
+
 	transition: all 0.5s;
 	-webkit-transition: all 0.5s;
 	-moz-transition: all 0.5s;
@@ -403,7 +403,7 @@ li.tree::after{
 	border-left: 1px solid #666;
 }
 
-/*We need to remove left-right connectors from elements without 
+/*We need to remove left-right connectors from elements without
 any siblings*/
 li.tree:only-child::after, li.tree:only-child::before {
 	display: none;
@@ -412,7 +412,7 @@ li.tree:only-child::after, li.tree:only-child::before {
 /*Remove space from the top of single children*/
 li.tree:only-child{ padding-top: 0;}
 
-/*Remove left connector from first child and 
+/*Remove left connector from first child and
 right connector from last child*/
 li.tree:first-child::before, li.tree:last-child::after{
 	border: 0 none;
@@ -446,11 +446,11 @@ li.tree button, li.tree a, li.tree div {
 	 display: inline-block;
 	 background-color: transparent;
 	 color: #bbb;
-	 
+
 	 border-radius: 5px;
 	 -webkit-border-radius: 5px;
 	 -moz-border-radius: 5px;
-	 
+
 	 transition: all 0.5s;
 	 -webkit-transition: all 0.5s;
 	 -moz-transition: all 0.5s;
