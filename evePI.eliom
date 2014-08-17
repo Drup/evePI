@@ -54,7 +54,7 @@ let select_system_handler slist location planet_div select_system =
       | [] -> Option ([],0l,Some (pcdata "No planets !"),false),[]
       | hd::tl -> hd,tl in
     let planet_select = int32_select ~name:location head tail in
-    let _ = Manip.replaceAllChild planet_div [planet_select] in
+    let _ = Manip.replaceChildren planet_div [planet_select] in
     Lwt.return () in
   let updater s = Lwt.ignore_result (updater s) ; s in
   Lwt.async (fun () ->

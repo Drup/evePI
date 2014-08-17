@@ -16,15 +16,15 @@ open F
 
 
 let format_grouped_data ?(a=[]) format_group format_data list =
-  let aux_group (group, l) =
+  let aux_group (group, l) next =
     let planets =
       match l with
 	| [] -> [span []]
 	| _ -> format_data l
     in
-    (D.dt (format_group group),[]),(dd planets,[])
+    D.dt (format_group group) :: dd planets :: next
   in
-  D.dl ~a:((a_class ["dl-horizontal"]) :: a) (List.map aux_group list)
+  D.dl ~a:((a_class ["dl-horizontal"]) :: a) (List.fold_right aux_group list [])
 
 
 (** {1 Planets list on the home page} *)
@@ -185,13 +185,13 @@ let layout_admin_node ?(a=[]) (name,notes,planets) =
 	| _ -> List.map snd l
     in
     let container = D.dd planets in
-    user_id, container, ((D.dt [pcdata user_name],[]),(container,[]))
+    (user_id, container, D.dt [pcdata user_name] :: container :: [])
   in
   let user_planets = List.map aux_user planets in
   let drag_info = List.map (fun (id,container,_) -> (id,container)) user_planets in
   let content =
     D.dl ~a:((a_class ["dl-horizontal"]) :: a)
-      (List.map (fun (_,_,x) -> x) user_planets) in
+      (List.concat (List.map (fun (_,_,x) -> x) user_planets)) in
   layout_node (name,notes,[content]) , drag_info
 
 let user_project_tree project user =

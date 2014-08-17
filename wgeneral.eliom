@@ -108,23 +108,23 @@ module Replacer = struct
 	Lwt.async
 	  (fun () ->
 		 event trigger >>= (fun _ ->
-		   Lwt.return (Manip.replaceAllChild container replacement)
+		   Lwt.return (Manip.replaceChildren container replacement)
 		 ))
 
   let multishot container replacement event trigger =
 	Lwt.async
 	  (fun () ->
 		 event trigger (fun _ _ ->
-		   Lwt.return (Manip.replaceAllChild container replacement)
+		   Lwt.return (Manip.replaceChildren container replacement)
 		 ))
 
   let toogle container original replacement event1 event2 trigger =
 	Lwt.async (fun () ->
 	  event1 trigger (fun _ _ -> (
-		debug "bla" ; Manip.replaceAllChild container replacement ;
+		debug "bla" ; Manip.replaceChildren container replacement ;
 		lwt _ = Lwt_js.sleep 0.1 in
 		(event2 trigger  >>= (fun _ ->
-		  Manip.replaceAllChild container original ;
+		  Manip.replaceChildren container original ;
 		  Lwt.return ())))
 	  ))
 

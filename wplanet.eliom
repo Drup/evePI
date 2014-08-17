@@ -15,7 +15,7 @@ open F
 
 let icon ?(a=[]) ?name typ =
   let name = Option.to_list (Option.map a_title name) in
-  D.i ~a:((a_class [typ;"planet"]) :: (a_draggable `True) :: name @ a) []
+  D.i ~a:((a_class [typ;"planet"]) :: (a_draggable true) :: name @ a) []
 
 (** {3 Delete a planet} *)
 

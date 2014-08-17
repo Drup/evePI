@@ -48,16 +48,18 @@ let make_list user =
         ~button_type:`Button [pcdata "Already in !"]
     else join_btn id
   in
-  let aux (id, name, desc) =
-    ((dt [span ~a:[a_class ["btn-group"]] [
-         a ~a:[a_class ["btn"]]
-	   ~service:project_member_coservice
-	   [pcdata name] id ;
-         make_button id name
-       ]],[]),
-     (dd [pcdata desc],[]))
+  let aux (id, name, desc) l =
+    dt [span ~a:[a_class ["btn-group"]] [
+        a ~a:[a_class ["btn"]]
+          ~service:project_member_coservice
+          [pcdata name] id ;
+        make_button id name
+      ]]
+    ::
+      dd [pcdata desc]
+    :: l
   in
-  Lwt.return (List.map aux projects)
+  Lwt.return (List.fold_right aux projects [])
 
 
 (** {3 Create a project} *)
@@ -66,9 +68,9 @@ let create_service =
   Eliom_service.App.post_coservice
     ~fallback:project_list_service
     ~post_params:Eliom_parameter.(
-	string "name" **
-	  string "description" **
-	  int32 "goal") ()
+        string "name" **
+          string "description" **
+          int32 "goal") ()
 
 let create_form () =
   lwt goals = Sdd.get_possible_goals () in
@@ -80,13 +82,13 @@ let create_form () =
   let fun_form (name,(desc,goal)) =
     [div ~a:[a_class ["input-prepend";"input-append"]]
        [ string_input ~a:[a_placeholder "Name"]
-	   ~input_type:`Text ~name:name () ;
-	 string_input ~a:[a_placeholder "Description"]
-	   ~input_type:`Text ~name:desc () ;
-	 int32_select ~name:goal ghd gtl ;
-	 button
-	   ~a:[a_class ["btn"]]
-	   ~button_type:`Submit [pcdata "Create"] ;
+           ~input_type:`Text ~name:name () ;
+         string_input ~a:[a_placeholder "Description"]
+           ~input_type:`Text ~name:desc () ;
+         int32_select ~name:goal ghd gtl ;
+         button
+           ~a:[a_class ["btn"]]
+           ~button_type:`Submit [pcdata "Create"] ;
        ]] in
   Lwt.return (
     post_form ~a:[a_class ["form-inline"]]
@@ -125,13 +127,13 @@ let add_goal_form project_id =
   in
   let form_fun (project_form,goal_form) =
     [ div ~a:[a_class ["input-append"]]
-	[ int32_select ~name:goal_form ghd gtl ;
-	  int64_button
-	    ~a:[a_class ["btn"]]
-	    ~name:project_form
-	    ~value:project_id
-	    [pcdata "Add"]
-	]]
+        [ int32_select ~name:goal_form ghd gtl ;
+          int64_button
+            ~a:[a_class ["btn"]]
+            ~name:project_form
+            ~value:project_id
+            [pcdata "Add"]
+        ]]
   in
   Lwt.return (
     post_form
@@ -147,11 +149,11 @@ let _ =
        lwt is_admin = QAdmin.verify project_id admin.id in
        if is_admin then
          lwt tree =
-	   Tree.make (fun id -> (Sdd.get_sons id) >|= List.map fst) goal in
+           Tree.make (fun id -> (Sdd.get_sons id) >|= List.map fst) goal in
          lwt _ = QProject.fill_tree project_id tree in
          Lwt.return ()
        else
-	 Lwt.return ()
+         Lwt.return ()
     )
 
 (** {3 Change the name of a project} *)
@@ -169,5 +171,5 @@ let _ =
          lwt _ = QProject.update_name project_id name in
          Lwt.return ()
        else
-	 Lwt.return ()
+         Lwt.return ()
     )
